@@ -60,16 +60,19 @@ wdi_limpia <- wdi_raw |>
     ),
     
     poblacion_mill = poblacion_total / 1e6
-  ) |>
-  
-  relocate(poblacion_mill, .after = poblacion_total) |>
+  ) |>  # Acá se cierra mutate()
   
   rename(
     pais = country,
     ingreso = income,
     anio = year,
     codigo_pais = iso3c
-  )
+  ) |>
+  
+  relocate(poblacion_mill, .after = poblacion_total) |>
+  relocate(region, .after = codigo_pais) |>
+  relocate(ingreso, .after = pib_per_capita_ppa) 
+
 
 #Diccionario de variables 
 diccionario <- tribble(
@@ -407,6 +410,7 @@ wdi_limpia |>
 
 write_csv(wdi_raw, "raw/wdi_raw.csv")
 write_csv(wdi_limpia, "raw/wdi_limpia.csv")
+
 
 
   
