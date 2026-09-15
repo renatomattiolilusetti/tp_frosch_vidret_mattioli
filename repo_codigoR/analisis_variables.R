@@ -1,17 +1,19 @@
 
 wdi_limpia <- read_csv("C:/Users/renam/OneDrive/Escritorio/tp_frosch_vidret_mattioli/repo_wdi/wdi_limpia.csv")
 
-#######################################################################################################################
+################################################################################
 # Para el conocimiento general de la base
-#######################################################################################################################
+################################################################################
 
 #Contamos dimension
 dim(wdi_limpia)  
+
 
 #Contamos si tenemos filas duplicadas
 wdi_limpia |>
   count(codigo_pais, anio) |>
   filter(n > 1)
+
 
 #Contamos países, primer año, último año y cantidad de años de las observaciones
 wdi_limpia |>
@@ -22,11 +24,18 @@ wdi_limpia |>
     cantidad_anios = n_distinct(anio)
   )
 
+
 #Contamos columnas (como las variables que precisamos para las pirámides explican lo mismo pero en diferentes rangos,
 #nos quedamos solo con 2, por eso sumamos despues del ncol())
 wdi_limpia |>
-  select(-(35:68)) |>
+  select(-(35:68), -(1:4)) |>
   ncol() + 2 
+
+
+################################################################################
+# Para el análisis de los NA
+################################################################################
+
 
 #Contamos los faltantes por variable
 faltantes_variables <- tibble(
@@ -43,7 +52,8 @@ faltantes_variables <- tibble(
     porcentaje_na = round(porcentaje_na, 2)
   )
 
-####
+
+#Para hacer la tabla_na_region (contamos solo esas columnas porque las otras arrojaban NA=0)
 variables_analisis <- names(wdi_limpia)[1:34]
 
 variables_analisis <- setdiff(
@@ -60,10 +70,343 @@ tabla_na_region <- wdi_limpia |>
     ) 
   ) |> 
   select(region,
-    where(~ all(. >= 5, na.rm = TRUE))
-    ) #Porque aca es obvio que va a tirar NA de 0 (por características de la base) |> 
+    where(~ is.numeric(.) && any(. >= 5, na.rm = TRUE))
+    ) #Porque aca es obvio que va a tirar NA de 0 (por características de la base)
 
-  
+
+#Vamos a armar mapas de calor para ver cuándo se concentran los NA a lo largo de las décadas, 
+#para cada región. 
+
+
+variables_candidatas <- setdiff(
+  names(tabla_na_region),
+  c("region", "pais", "codigo_pais", "anio")
+)
+
+variables_mapa <- wdi_limpia |>
+  filter(anio >= 1960, anio <= 2025) |>
+  group_by(region) |>
+  summarise(
+    across(
+      all_of(variables_candidatas),
+      ~ mean(is.na(.)) * 100
+    ),
+    .groups = "drop"
+  ) |>
+  select(all_of(variables_candidatas)) |>
+  select(where(~ any(. >= 5))) |>
+  names()
+
+na_decadas <- wdi_limpia |>
+  filter(anio >= 1960, anio <= 2025) |>
+  mutate(
+    decada = cut(
+      anio,
+      breaks = c(1960, 1970, 1980, 1990, 2000, 2010, 2020, 2026),
+      labels = c(
+        "1960–1969", "1970–1979", "1980–1989",
+        "1990–1999", "2000–2009", "2010–2019",
+        "2020–2025"
+      ),
+      right = FALSE
+    )
+  ) |>
+  group_by(region, decada) |>
+  summarise(
+    across(
+      all_of(variables_mapa),
+      ~ mean(is.na(.)) * 100
+    ),
+    .groups = "drop"
+  ) |>
+  pivot_longer(
+    cols = all_of(variables_mapa),
+    names_to = "variable",
+    values_to = "porcentaje_na"
+  )
+
+region_elegida <- "África Subsahariana"
+
+na_decadas |>
+  filter(region == region_elegida) |>
+  ggplot(aes(x = decada, y = variable, fill = porcentaje_na)) +
+  geom_tile(color = "white") +
+  scale_fill_gradient(
+    low = "#F7FBFF",
+    high = "#08306B",
+    limits = c(0, 100),
+    name = "% de NA"
+  ) +
+  scale_y_discrete(limits = rev(variables_mapa)) +
+  labs(
+    title = "Faltantes por variable y década",
+    subtitle = region_elegida,
+    x = NULL,
+    y = NULL,
+    caption = "Porcentaje sobre las observaciones país-año de cada región y período."
+  ) +
+  theme_minimal() +
+  theme(
+    panel.grid = element_blank(),
+    axis.text.x = element_text(angle = 45, hjust = 1)
+  )
+
+#Regiones para copiar y pegar y reproducir todos los gráficos:
+# Oriente Medio, Norte de África, Afganistán y Pakistán
+# África Subsahariana
+# América del Norte
+# América Latina y el Caribe
+# Asia Meridional
+# Asia Oriental y Pacífico 
+# Europa y Asia Central
+
+################################################################################
+# Gráficos y análisis de variables
+################################################################################
+
+# Gráfico con poblacion_total ##################################################
+
+poblacion_region <- wdi_limpia |>
+  group_by(anio, region) |>
+  summarise(
+    poblacion = sum(poblacion_total, na.rm = TRUE),
+    .groups = "drop"
+  )
+
+# Gráfico de áreas apiladas
+ggplot(
+  poblacion_region,
+  aes(
+    x = anio,
+    y = poblacion / 1e9,
+    color = region
+  )
+) +
+  geom_line(linewidth = 1.1) +
+  facet_wrap(
+    ~ region,
+    scales = "free_y"
+  ) +
+  labs(
+    title = "Evolución de la población por región",
+    subtitle = "1960-2025",
+    x = "Año",
+    y = "Población (miles de millones)"
+  ) +
+  scale_color_brewer(palette = "Dark2") +
+  theme_minimal() +
+  theme(
+    legend.position = "none"
+  )
+
+
+# Grafico sobre crecimiento natural ############################################
+
+# 1. Agrupar por región y año hasta 2025
+df_brecha_regional <- wdi_limpia |> 
+  filter(!is.na(region), region != "Aggregates", anio <= 2025) |> 
+  group_by(region, anio) |> 
+  summarise(
+    natalidad_pct = mean(natalidad, na.rm = TRUE) / 10,
+    mortalidad_pct = mean(mortalidad, na.rm = TRUE) / 10,
+    .groups = "drop"
+  ) |> 
+  pivot_longer(
+    cols = c(natalidad_pct, mortalidad_pct), 
+    names_to = "tasa", 
+    values_to = "valor"
+  )
+
+# 2. Graficar paneles por región (1960 - 2025)
+ggplot(df_brecha_regional, aes(x = anio, y = valor, color = tasa)) +
+  geom_line(linewidth = 1) +
+  facet_wrap(~region, ncol = 3) +
+  scale_x_continuous(breaks = seq(1960, 2025, by = 15)) +
+  scale_color_manual(
+    values = c("natalidad_pct" = "#2b5c8f", "mortalidad_pct" = "#d95f02"),
+    labels = c("Mortalidad (%)", "Natalidad (%)")
+  ) +
+  labs(
+    title = "Brecha entre Natalidad y Mortalidad por Región (1960 - 2025)",
+    subtitle = "Evolución del balance vegetativo regional",
+    x = "Año",
+    y = "Tasa (%)",
+    color = "Componente"
+  ) +
+  theme_minimal() +
+  theme(
+    legend.position = "bottom",
+    strip.text = element_text(face = "bold", size = 9)
+  )
+
+# Gráfico sobre tasa de crecimiento anual por regiones #########################
+
+# Resume el crecimiento poblacional de cada país por década
+crecimiento_por_decada <- wdi_limpia |>
+  filter(anio >= 1960, anio <= 2025) |>
+  mutate(
+    decada = cut(
+      anio,
+      breaks = c(1960, 1970, 1980, 1990, 2000, 2010, 2020, 2026),
+      labels = c(
+        "1960–1969", "1970–1979", "1980–1989",
+        "1990–1999", "2000–2009", "2010–2019",
+        "2020–2025"
+      ),
+      right = FALSE
+    )
+  ) |>
+  group_by(pais, codigo_pais, region, decada) |>
+  summarise(
+    anios_con_dato = sum(!is.na(crecimiento_poblacional)),
+    media = if (anios_con_dato > 0) {
+      mean(crecimiento_poblacional, na.rm = TRUE)
+    } else {
+      NA_real_
+    },
+    mediana = if (anios_con_dato > 0) {
+      median(crecimiento_poblacional, na.rm = TRUE)
+    } else {
+      NA_real_
+    },
+    .groups = "drop"
+  ) |>
+  arrange(pais, decada)
+
+# Calculo de la mediana entre países para cada región y año
+crecimiento_region_anual <- wdi_limpia |>
+  filter(anio >= 1960, anio <= 2025) |>
+  group_by(region, anio) |>
+  summarise(
+    paises_con_dato = sum(!is.na(crecimiento_poblacional)),
+    mediana_regional = if (paises_con_dato > 0) {
+      median(crecimiento_poblacional, na.rm = TRUE)
+    } else {
+      NA_real_
+    },
+    .groups = "drop"
+  )
+
+# Gráfico de la mediana regional sin ponderar por poblacion
+grafico_crecimiento_regional <- ggplot(
+  crecimiento_region_anual,
+  aes(
+    x = anio,
+    y = mediana_regional,
+    color = region,
+    group = region
+  )
+) +
+  geom_hline(
+    yintercept = 0,
+    linetype = "dashed",
+    color = "gray60"
+  ) +
+  geom_line(linewidth = 1) +
+  scale_x_continuous(
+    breaks = seq(1960, 2020, by = 10),
+    limits = c(1960, 2025)
+  ) +
+  labs(
+    title = "Evolución del crecimiento poblacional por región",
+    subtitle = "Mediana del crecimiento anual entre países, 1960–2025",
+    x = "Año",
+    y = "Crecimiento anual (%)",
+    color = "Región"
+  ) +
+  theme_minimal() +
+  theme(
+    legend.position = "bottom"
+  ) +
+  guides(color = guide_legend(ncol = 1))
+
+##Mediana de tasa de crecimiento poblacional ponderada por población##
+
+# Calcular el peso poblacional de cada país en cada año
+pesos_poblacionales <- wdi_limpia |>
+  filter(anio >= 1960, anio <= 2025) |>
+  select(
+    pais, codigo_pais, region, anio,
+    poblacion_total, crecimiento_poblacional
+  ) |>
+  filter(
+    !is.na(poblacion_total),
+    poblacion_total > 0,
+    !is.na(crecimiento_poblacional)
+  ) |>
+  group_by(region, anio) |>
+  mutate(
+    poblacion_region_con_datos = sum(poblacion_total),
+    peso_poblacional = poblacion_total / poblacion_region_con_datos,
+    porcentaje_poblacion = peso_poblacional * 100,
+    aporte_crecimiento = peso_poblacional * crecimiento_poblacional
+  ) |>
+  ungroup()
+
+# Sumar los aportes para obtener la media ponderada regional
+crecimiento_regional_ponderado <- pesos_poblacionales |>
+  group_by(region, anio) |>
+  summarise(
+    economias_con_dato = n(),
+    suma_pesos = sum(peso_poblacional),
+    crecimiento_ponderado = sum(aporte_crecimiento),
+    .groups = "drop"
+  )
+
+# Graficar la evolución anual
+grafico_crecimiento_ponderado <- ggplot(
+  crecimiento_regional_ponderado,
+  aes(
+    x = anio,
+    y = crecimiento_ponderado,
+    color = region,
+    group = region
+  )
+) +
+  geom_hline(
+    yintercept = 0,
+    linetype = "dashed",
+    color = "gray60"
+  ) +
+  geom_line(linewidth = 1) +
+  scale_x_continuous(
+    breaks = seq(1960, 2020, by = 10),
+    limits = c(1960, 2025)
+  ) +
+  labs(
+    title = "Crecimiento poblacional ponderado por región",
+    subtitle = "Media de las tasas anuales ponderada por población de cada año",
+    x = "Año",
+    y = "Crecimiento anual ponderado (%)",
+    color = "Región"
+  ) +
+  theme_minimal() +
+  theme(
+    legend.position = "bottom"
+  ) +
+  guides(color = guide_legend(ncol = 1))
+
+print(grafico_crecimiento_ponderado)
+
+cobertura_crecimiento <- wdi_limpia |>
+  filter(
+    anio >= 1960, anio <= 2025,
+    !is.na(poblacion_total),
+    poblacion_total > 0
+  ) |>
+  group_by(region, anio) |>
+  summarise(
+    economias_con_poblacion = n(),
+    economias_con_ambos_datos = sum(!is.na(crecimiento_poblacional)),
+    cobertura_poblacion = 100 *
+      sum(poblacion_total[!is.na(crecimiento_poblacional)]) /
+      sum(poblacion_total),
+    .groups = "drop"
+  )
+
+################################################################################
+# Explicación de las variables
+################################################################################
 
 #Diccionario de variables 
 diccionario <- tribble(
@@ -365,6 +708,3 @@ diccionario <- tribble(
   "Ordinal", "-", "4 categorías + Sin clasificar"
 )
 
-
-#Cuenta los faltantes por variable
-colSums(is.na(wdi_limpia))

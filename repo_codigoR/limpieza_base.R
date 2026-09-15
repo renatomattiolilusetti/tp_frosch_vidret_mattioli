@@ -8,7 +8,7 @@ library(skimr)
 library(readr)
 library(dplyr)
 
-wdi_raw <- read_csv("raw/wdi_raw.csv")
+wdi_raw <- read_csv("C:/Users/renam/OneDrive/Escritorio/tp_frosch_vidret_mattioli/raw/wdi_raw.csv")
 
 # Limpiamos base:
 
@@ -25,7 +25,8 @@ wdi_limpia <- wdi_raw |>
   filter(
     region != "Aggregates",
     !is.na(region),
-    region != ""
+    region != "",
+    !(iso3c %in% territorios_excluir)
   ) |>
   mutate(
     region = dplyr::recode(
@@ -76,6 +77,33 @@ wdi_limpia <- wdi_raw |>
 wdi_limpia <- wdi_limpia |>
   arrange(pais, anio)
 
+#El vector para excluir los territorios no soberanos y/o economías agregadas por fuera de países
+territorios_excluir <- c(
+  "ABW", # Aruba
+  "ASM", # Samoa Americana
+  "BMU", # Bermudas
+  "VGB", # Islas Vírgenes Británicas
+  "CYM", # Islas Caimán
+  "CHI", # Islas del Canal
+  "CUW", # Curazao
+  "FRO", # Islas Feroe
+  "PYF", # Polinesia Francesa
+  "GIB", # Gibraltar
+  "GRL", # Groenlandia
+  "GUM", # Guam
+  "HKG", # Hong Kong
+  "IMN", # Isla de Man
+  "MAC", # Macao
+  "NCL", # Nueva Caledonia
+  "MNP", # Islas Marianas del Norte
+  "PRI", # Puerto Rico
+  "SXM", # Sint Maarten
+  "MAF", # Saint-Martin
+  "TCA", # Islas Turcas y Caicos
+  "VIR"  # Islas Vírgenes de Estados Unidos
+)
+
+
 #No ejecutar
 #write_csv(wdi_raw, "raw/wdi_raw.csv")
-#write_csv(wdi_limpia, "raw/wdi_limpia.csv")
+#write_csv(wdi_limpia, "C:/Users/renam/OneDrive/Escritorio/tp_frosch_vidret_mattioli/repo_wdi/wdi_limpia.csv")
