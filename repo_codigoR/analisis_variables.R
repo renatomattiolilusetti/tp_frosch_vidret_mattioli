@@ -37,6 +37,7 @@ faltantes_variables <- tibble(
   mutate(
     porcentaje_na = cantidad_na / total_observaciones * 100
   ) |>
+  filter(porcentaje_na >= 5) |> 
   arrange(porcentaje_na, variable) |>
   mutate(
     porcentaje_na = round(porcentaje_na, 2)
@@ -56,8 +57,13 @@ tabla_na_region <- wdi_limpia |>
     across(
       all_of(variables_analisis),
       ~ round(mean(is.na(.)) * 100, 2)
-    )
-  )
+    ) 
+  ) |> 
+  select(region,
+    where(~ all(. >= 5, na.rm = TRUE))
+    ) #Porque aca es obvio que va a tirar NA de 0 (por características de la base) |> 
+
+  
 
 #Diccionario de variables 
 diccionario <- tribble(
