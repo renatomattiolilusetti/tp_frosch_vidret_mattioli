@@ -1,4 +1,63 @@
 
+wdi_limpia <- read_csv("C:/Users/renam/OneDrive/Escritorio/tp_frosch_vidret_mattioli/repo_wdi/wdi_limpia.csv")
+
+#######################################################################################################################
+# Para el conocimiento general de la base
+#######################################################################################################################
+
+#Contamos dimension
+dim(wdi_limpia)  
+
+#Contamos si tenemos filas duplicadas
+wdi_limpia |>
+  count(codigo_pais, anio) |>
+  filter(n > 1)
+
+#Contamos países, primer año, último año y cantidad de años de las observaciones
+wdi_limpia |>
+  summarise(
+    cantidad_paises = n_distinct(codigo_pais),
+    primer_anio = min(anio),
+    ultimo_anio = max(anio),
+    cantidad_anios = n_distinct(anio)
+  )
+
+#Contamos columnas (como las variables que precisamos para las pirámides explican lo mismo pero en diferentes rangos,
+#nos quedamos solo con 2, por eso sumamos despues del ncol())
+wdi_limpia |>
+  select(-(35:68)) |>
+  ncol() + 2 
+
+#Contamos los faltantes por variable
+faltantes_variables <- tibble(
+  variable = names(wdi_limpia),
+  cantidad_na = colSums(is.na(wdi_limpia)),
+  total_observaciones = nrow(wdi_limpia)
+) |>
+  mutate(
+    porcentaje_na = cantidad_na / total_observaciones * 100
+  ) |>
+  arrange(porcentaje_na, variable) |>
+  mutate(
+    porcentaje_na = round(porcentaje_na, 2)
+  )
+
+####
+variables_analisis <- names(wdi_limpia)[1:34]
+
+variables_analisis <- setdiff(
+  variables_analisis,
+  "region"
+)
+
+tabla_na_region <- wdi_limpia |>
+  group_by(region) |>
+  summarise(
+    across(
+      all_of(variables_analisis),
+      ~ round(mean(is.na(.)) * 100, 2)
+    )
+  )
 
 #Diccionario de variables 
 diccionario <- tribble(
@@ -300,37 +359,6 @@ diccionario <- tribble(
   "Ordinal", "-", "4 categorías + Sin clasificar"
 )
 
-#Comprobamos que no se repitan observaciones de un mismo pais en un mismo anio
-wdi_limpia |>
-  count(codigo_pais, anio) |>
-  filter(n > 1)
-
-wdi_limpia |>
-  summarise(
-    cantidad_paises = n_distinct(codigo_pais),
-    primer_anio = min(anio),
-    ultimo_anio = max(anio),
-    cantidad_anios = n_distinct(anio)
-  )
 
 #Cuenta los faltantes por variable
 colSums(is.na(wdi_limpia))
-
-#Como cambia la dispoinibilidad de participacion laboral segun el anio
-wdi_limpia |>
-  group_by(anio) |>
-  summarise(
-    paises_con_datos = sum(!is.na(participacion_laboral)),
-    paises_sin_datos = sum(is.na(participacion_laboral))
-  ) |>
-  print(n = Inf)
-
-#Cuantos anios tiene cada pais con datos
-wdi_limpia |>
-  filter(anio >= 1961) |>
-  group_by(codigo_pais, pais) |>
-  summarise(
-    anios_con_datos = sum(!is.na(participacion_laboral)),
-    .groups = "drop"
-  ) |>
-  count(anios_con_datos)
