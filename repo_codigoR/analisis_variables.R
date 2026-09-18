@@ -125,7 +125,7 @@ na_decadas <- wdi_limpia |>
     values_to = "porcentaje_na"
   )
 
-region_elegida <- "África Subsahariana"
+region_elegida <- "Europa y Asia Central"
 
 na_decadas |>
   filter(region == region_elegida) |>
@@ -166,15 +166,26 @@ na_decadas |>
 
 # Gráfico con poblacion_total ##################################################
 
+# Población total por región y año
 poblacion_region <- wdi_limpia |>
+  filter(
+    between(anio, 1960, 2025),
+    !is.na(region),
+    region != ""
+  ) |>
   group_by(anio, region) |>
   summarise(
-    poblacion = sum(poblacion_total, na.rm = TRUE),
+    # Si todos los datos faltan, conservar NA en lugar de generar un cero
+    poblacion = if (all(is.na(poblacion_total))) {
+      NA_real_
+    } else {
+      sum(poblacion_total, na.rm = TRUE)
+    },
     .groups = "drop"
   )
 
-# Gráfico de áreas apiladas
-ggplot(
+# Gráfico de líneas por región
+grafico_poblacion_region <- ggplot(
   poblacion_region,
   aes(
     x = anio,
@@ -184,60 +195,132 @@ ggplot(
 ) +
   geom_line(linewidth = 1.1) +
   facet_wrap(
-    ~ region,
-    scales = "free_y" #Con "fixed" se usa la misma escala vertical en los gráficos (los hace comparables)
+    ~region,
+    ncol = 3,
+    scales = "free_y",
+    labeller = label_wrap_gen(width = 32),
+    axes = "all",
+    axis.labels = "all"
+  ) +
+  scale_x_continuous(
+    breaks = c(seq(1960, 2020, by = 10), 2025),
+    limits = c(1960, 2025),
+    expand = expansion(mult = c(0.03, 0.05))
+  ) +
+  scale_y_continuous(
+    labels = scales::label_number(
+      decimal.mark = ",",
+      big.mark = "."
+    )
   ) +
   labs(
     title = "Evolución de la población por región",
-    subtitle = "1960-2025",
+    subtitle = "1960–2025 | Escala vertical diferente por región",
     x = "Año",
     y = "Población (miles de millones)"
   ) +
   scale_color_brewer(palette = "Dark2") +
   theme_minimal() +
   theme(
-    legend.position = "none"
+    legend.position = "none",
+    axis.text.x = element_text(angle = 45, hjust = 1),
+    strip.text = element_text(face = "bold", size = 9),
+    panel.grid.minor = element_blank()
   )
 
+print(grafico_poblacion_region)
 
 # Grafico sobre crecimiento natural ############################################
 
-# 1. Agrupar por región y año hasta 2025
-df_brecha_regional <- wdi_limpia |> 
-  filter(!is.na(region), region != "Aggregates", anio <= 2025) |> 
-  group_by(region, anio) |> 
+#Calcular pesos poblacionales por región y año
+pesos_crecimiento_natural <- wdi_limpia |>
+  filter(
+    !is.na(region),
+    region != "",
+    region != "Aggregates",
+    between(anio, 1960, 2025),
+    !is.na(poblacion_total),
+    poblacion_total > 0,
+    !is.na(natalidad),
+    !is.na(mortalidad)
+  ) |>
+  group_by(region, anio) |>
+  mutate(
+    poblacion_region_con_datos = sum(poblacion_total),
+    peso_poblacional = poblacion_total / poblacion_region_con_datos
+  ) |>
+  ungroup()
+
+#Calcular las tasas regionales ponderadas
+crecimiento_natural_regional <- pesos_crecimiento_natural |>
+  group_by(region, anio) |>
   summarise(
-    natalidad_pct = mean(natalidad, na.rm = TRUE) / 10,
-    mortalidad_pct = mean(mortalidad, na.rm = TRUE) / 10,
+    natalidad_pct = sum(natalidad * peso_poblacional) / 10,
+    mortalidad_pct = sum(mortalidad * peso_poblacional) / 10,
     .groups = "drop"
-  ) |> 
+  ) |>
+  mutate(
+    crecimiento_natural_pct = natalidad_pct - mortalidad_pct
+  )
+
+#Pasar las dos tasas a formato largo para graficarlas
+df_brecha_regional <- crecimiento_natural_regional |>
+  select(region, anio, natalidad_pct, mortalidad_pct) |>
   pivot_longer(
-    cols = c(natalidad_pct, mortalidad_pct), 
-    names_to = "tasa", 
+    cols = c(natalidad_pct, mortalidad_pct),
+    names_to = "tasa",
     values_to = "valor"
   )
 
-# 2. Graficar paneles por región (1960 - 2025)
-ggplot(df_brecha_regional, aes(x = anio, y = valor, color = tasa)) +
+#Graficar paneles por región
+grafico_crecimiento_natural <- ggplot(
+  df_brecha_regional,
+  aes(x = anio, y = valor, color = tasa)
+) +
   geom_line(linewidth = 1) +
-  facet_wrap(~region, ncol = 3) +
-  scale_x_continuous(breaks = seq(1960, 2025, by = 15)) +
+  facet_wrap(
+    ~region,
+    ncol = 3,
+    labeller = label_wrap_gen(width = 32),
+    axes = "all_x",
+    axis.labels = "all_x"
+  ) +
+  scale_x_continuous(
+    breaks = c(1960, 1980, 2000, 2025),
+    limits = c(1960, 2025),
+    expand = expansion(mult = c(0.04, 0.06))
+  ) +
+  scale_y_continuous(
+    limits = c(0, NA),
+    breaks = scales::breaks_width(1),
+    expand = expansion(mult = c(0, 0.05))
+  ) +
   scale_color_manual(
-    values = c("natalidad_pct" = "#2b5c8f", "mortalidad_pct" = "#d95f02"),
-    labels = c("Mortalidad (%)", "Natalidad (%)")
+    values = c(
+      natalidad_pct = "#2b5c8f",
+      mortalidad_pct = "#d95f02"
+    ),
+    breaks = c("natalidad_pct", "mortalidad_pct"),
+    labels = c("Natalidad (%)", "Mortalidad (%)")
   ) +
   labs(
-    title = "Brecha entre Natalidad y Mortalidad por Región (1960 - 2025)",
-    subtitle = "Evolución del balance vegetativo regional",
+    title = "Natalidad y mortalidad por región (1960–2025)",
+    subtitle = "Tasas ponderadas por población de cada año",
     x = "Año",
     y = "Tasa (%)",
-    color = "Componente"
+    color = "Componente",
+    caption = paste(
+      "La diferencia entre natalidad y mortalidad es el crecimiento natural.",
+      "Se incluyen países con datos disponibles de ambas tasas y población."
+    )
   ) +
   theme_minimal() +
   theme(
     legend.position = "bottom",
     strip.text = element_text(face = "bold", size = 9)
   )
+
+print(grafico_crecimiento_natural)
 
 # Gráfico sobre tasa de crecimiento anual por regiones #########################
 
@@ -357,21 +440,62 @@ cobertura_crecimiento <- wdi_limpia |>
     .groups = "drop"
   )
 
+# Comparar la tasa de crecimiento entre el período inicial y el reciente
+comparacion_crecimiento <- crecimiento_regional_ponderado |>
+  filter(
+    between(anio, 1961, 1970) |
+      between(anio, 2016, 2025)
+  ) |>
+  mutate(
+    periodo = if_else(
+      anio <= 1970,
+      "1961_1970",
+      "2016_2025"
+    )
+  ) |>
+  group_by(region, periodo) |>
+  summarise(
+    tasa_promedio = mean(crecimiento_ponderado, na.rm = TRUE),
+    .groups = "drop"
+  ) |>
+  pivot_wider(
+    names_from = periodo,
+    values_from = tasa_promedio,
+    names_prefix = "tasa_"
+  ) |>
+  mutate(
+    cambio_pp = tasa_2016_2025 - tasa_1961_1970,
+    
+  # Calcular el cambio relativo cuando la tasa inicial es positiva
+    cambio_porcentual = if_else(
+      tasa_1961_1970 > 0,
+      (cambio_pp / tasa_1961_1970) * 100,
+      NA_real_
+    )
+  ) |>
+  arrange(cambio_porcentual) |>
+  mutate(
+    across(where(is.numeric), ~ round(.x, 2))
+  )
+
+View(comparacion_crecimiento)
+
 ################################################################################
 # Explicación de las variables
 ################################################################################
 
-#Diccionario de variables 
+# Diccionario de variables
+
 diccionario <- tribble(
   ~variable, ~descripcion, ~tipo, ~unidad, ~rango_teorico,
   
   # Identificación y tiempo
   "pais",
-  "Nombre del país o economía",
+  "Nombre del país",
   "Categórica", "-", "-",
   
   "codigo_pais",
-  "Código de tres letras que identifica al país o economía",
+  "Código de tres letras utilizado para identificar al país",
   "Categórica", "-", "-",
   
   "anio",
@@ -380,15 +504,15 @@ diccionario <- tribble(
   
   # Tamaño y dinámica demográfica
   "poblacion_total",
-  "Población total del país o economía",
+  "Población total del país",
   "Numérica", "Personas", "> 0",
   
   "poblacion_mill",
-  "Población total dividida por un millón",
+  "Población total del país dividida por un millón",
   "Numérica", "Millones de personas", "> 0",
   
   "crecimiento_poblacional",
-  "Tasa de crecimiento exponencial anual de la población",
+  "Tasa de crecimiento exponencial anual de la población del país",
   "Numérica", "% anual", "-Inf a Inf",
   
   "natalidad",
@@ -430,7 +554,7 @@ diccionario <- tribble(
   
   # Dependencia demográfica
   "dependencia_total",
-  "Población de 0 a 14 años y de 65 o más, dividida por la población de 15 a 64 años, por 100",
+  "Población de 0 a 14 años y de 65 años o más, dividida por la población de 15 a 64 años, por 100",
   "Numérica", "Personas por cada 100 personas de 15 a 64 años", ">= 0",
   
   "dependencia_joven",
@@ -653,11 +777,11 @@ diccionario <- tribble(
   
   # Clasificaciones del Banco Mundial
   "region",
-  "Región del Banco Mundial asociada al país en la descarga",
+  "Región del Banco Mundial asociada al país en la descarga; no representa una clasificación histórica anual",
   "Categórica", "-", "7 categorías",
   
   "ingreso",
   "Grupo de ingreso del Banco Mundial en la descarga; no necesariamente corresponde al grupo de cada año histórico",
-  "Ordinal", "-", "4 categorías + Sin clasificar"
+  "Ordinal", "-", "4 categorías"
 )
 

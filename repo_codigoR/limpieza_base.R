@@ -8,7 +8,7 @@ library(skimr)
 library(readr)
 library(dplyr)
 
-wdi_raw <- read_csv("C:/Users/renam/OneDrive/Escritorio/tp_frosch_vidret_mattioli/raw/wdi_raw.csv")
+#wdi_raw <- read_csv("C:/Users/renam/OneDrive/Escritorio/tp_frosch_vidret_mattioli/raw/wdi_raw.csv")
 #wdi_raw <- read_csv(file.choose())
 
 #El vector para excluir los territorios no soberanos y/o economías agregadas por fuera de países
