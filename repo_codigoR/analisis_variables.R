@@ -125,31 +125,144 @@ na_decadas <- wdi_limpia |>
     values_to = "porcentaje_na"
   )
 
-region_elegida <- "Europa y Asia Central"
+# MAPA DE CALOR PARA PRESENTACIONES ###########################################
 
-na_decadas |>
-  filter(region == region_elegida) |>
-  ggplot(aes(x = decada, y = variable, fill = porcentaje_na)) +
-  geom_tile(color = "white") +
+# MAPAS DE LAS SIETE REGIONES EN UNA SOLA IMAGEN ###############################
+
+# Etiquetas más cortas para aprovechar el espacio
+etiquetas_variables <- c(
+  participacion_laboral = "Participación laboral",
+  tasa_empleo = "Empleo",
+  tasa_desempleo = "Desempleo",
+  participacion_femenina = "Participación femenina",
+  pib_por_ocupado = "PIB por ocupado",
+  pib_per_capita_ppa = "PIB per cápita PPA",
+  gasto_salud_pib = "Gasto en salud",
+  gasto_publico_salud_pib = "Gasto público en salud",
+  gasto_bolsillo_salud = "Gasto de bolsillo",
+  gasto_educacion_pib = "Gasto en educación",
+  gasto_por_alumno_primaria = "Gasto/alumno primaria",
+  gasto_por_alumno_secundaria = "Gasto/alumno secundaria",
+  cobertura_proteccion_social = "Protección social",
+  cobertura_seguros_sociales = "Seguros sociales",
+  mortalidad_menores_5 = "Mortalidad <5 años"
+)
+
+etiquetar_variables <- function(x) {
+  etiquetas <- unname(etiquetas_variables[x])
+  
+  # Para otras variables, usar su nombre sin guiones bajos
+  faltan <- is.na(etiquetas)
+  etiquetas[faltan] <- gsub("_", " ", x[faltan])
+  
+  stringr::str_wrap(etiquetas, width = 23)
+}
+
+grafico_mapas_na <- ggplot(
+  na_decadas,
+  aes(x = decada, y = variable, fill = porcentaje_na)
+) +
+  geom_tile(
+    width = 0.96,
+    height = 0.90,
+    color = "white",
+    linewidth = 0.2
+  ) +
+  facet_wrap(
+    ~region,
+    ncol = 4,
+    labeller = label_wrap_gen(width = 22),
+    axes = "all_x",
+    axis.labels = "all_x"
+  ) +
   scale_fill_gradient(
     low = "#F7FBFF",
     high = "#08306B",
     limits = c(0, 100),
-    name = "% de NA"
+    breaks = c(0, 25, 50, 75, 100),
+    name = "Datos faltantes (%)"
   ) +
-  scale_y_discrete(limits = rev(variables_mapa)) +
+  scale_x_discrete(
+    # Mostrar el año de inicio de cada período
+    labels = function(x) substr(x, 1, 4),
+    drop = FALSE,
+    expand = expansion(add = 0.05)
+  ) +
+  scale_y_discrete(
+    limits = rev(variables_mapa),
+    labels = etiquetar_variables,
+    expand = expansion(add = 0.05)
+  ) +
   labs(
-    title = "Faltantes por variable y década",
-    subtitle = region_elegida,
-    x = NULL,
-    y = NULL,
-    caption = "Porcentaje sobre las observaciones país-año de cada región y período."
+    title = "Disponibilidad de datos por región y período",
+    x = "Inicio del período",
+    y = "Variable",
+    caption = paste(
+      "Porcentaje de observaciones país-año sin datos.",
+      "Períodos de diez años, excepto 2020-2025 (seis años)."
+    )
   ) +
-  theme_minimal() +
+  theme_minimal(base_size = 12) +
   theme(
     panel.grid = element_blank(),
-    axis.text.x = element_text(angle = 45, hjust = 1)
+    
+    plot.title = element_text(
+      size = 21,
+      face = "bold",
+      margin = margin(b = 10)
+    ),
+    
+    strip.text = element_text(
+      size = 11,
+      face = "bold",
+      margin = margin(b = 6)
+    ),
+    
+    axis.text.x = element_text(
+      size = 9,
+      angle = 90,
+      hjust = 1,
+      vjust = 0.5,
+      color = "gray20"
+    ),
+    axis.text.y = element_text(
+      size = 10,
+      color = "gray20",
+      lineheight = 0.9
+    ),
+    axis.title = element_text(size = 12),
+    
+    panel.spacing.x = grid::unit(0.5, "cm"),
+    panel.spacing.y = grid::unit(0.5, "cm"),
+    
+    legend.position = "bottom",
+    legend.title = element_text(size = 11),
+    legend.text = element_text(size = 10),
+    
+    plot.caption = element_text(size = 10, hjust = 0),
+    plot.margin = margin(10, 10, 10, 10)
+  ) +
+  guides(
+    fill = guide_colorbar(
+      title.position = "top",
+      title.hjust = 0.5,
+      barwidth = grid::unit(7, "cm"),
+      barheight = grid::unit(0.3, "cm")
+    )
   )
+
+print(grafico_mapas_na)
+
+# Guardar una sola imagen horizontal 16:9 en Descargas
+ggsave(
+  filename = path.expand("~/Downloads/mapas_na_todas_las_regiones.png"),
+  plot = grafico_mapas_na,
+  width = 16,
+  height = 9,
+  units = "in",
+  dpi = 300,
+  bg = "white"
+)
 
 #Regiones para copiar y pegar y reproducir todos los gráficos:
 # Oriente Medio, Norte de África, Afganistán y Pakistán
