@@ -185,7 +185,7 @@ ggplot(
   geom_line(linewidth = 1.1) +
   facet_wrap(
     ~ region,
-    scales = "fixed" #Con "free_y" en vez de fixed cada región tiene una escala vertical diferente; no son comparables
+    scales = "free_y" #Con "fixed" se usa la misma escala vertical en los gráficos (los hace comparables)
   ) +
   labs(
     title = "Evolución de la población por región",
