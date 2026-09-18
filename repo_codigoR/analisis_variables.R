@@ -185,7 +185,7 @@ ggplot(
   geom_line(linewidth = 1.1) +
   facet_wrap(
     ~ region,
-    scales = "free_y"
+    scales = "fixed" #Con "free_y" en vez de fixed cada región tiene una escala vertical diferente; no son comparables
   ) +
   labs(
     title = "Evolución de la población por región",
@@ -273,54 +273,7 @@ crecimiento_por_decada <- wdi_limpia |>
   ) |>
   arrange(pais, decada)
 
-# Calculo de la mediana entre países para cada región y año
-crecimiento_region_anual <- wdi_limpia |>
-  filter(anio >= 1960, anio <= 2025) |>
-  group_by(region, anio) |>
-  summarise(
-    paises_con_dato = sum(!is.na(crecimiento_poblacional)),
-    mediana_regional = if (paises_con_dato > 0) {
-      median(crecimiento_poblacional, na.rm = TRUE)
-    } else {
-      NA_real_
-    },
-    .groups = "drop"
-  )
-
-# Gráfico de la mediana regional sin ponderar por poblacion
-grafico_crecimiento_regional <- ggplot(
-  crecimiento_region_anual,
-  aes(
-    x = anio,
-    y = mediana_regional,
-    color = region,
-    group = region
-  )
-) +
-  geom_hline(
-    yintercept = 0,
-    linetype = "dashed",
-    color = "gray60"
-  ) +
-  geom_line(linewidth = 1) +
-  scale_x_continuous(
-    breaks = seq(1960, 2020, by = 10),
-    limits = c(1960, 2025)
-  ) +
-  labs(
-    title = "Evolución del crecimiento poblacional por región",
-    subtitle = "Mediana del crecimiento anual entre países, 1960–2025",
-    x = "Año",
-    y = "Crecimiento anual (%)",
-    color = "Región"
-  ) +
-  theme_minimal() +
-  theme(
-    legend.position = "bottom"
-  ) +
-  guides(color = guide_legend(ncol = 1))
-
-##Mediana de tasa de crecimiento poblacional ponderada por población##
+##Media de la tasa de crecimiento poblacional ponderada por población##
 
 # Calcular el peso poblacional de cada país en cada año
 pesos_poblacionales <- wdi_limpia |>
@@ -374,7 +327,7 @@ grafico_crecimiento_ponderado <- ggplot(
     limits = c(1960, 2025)
   ) +
   labs(
-    title = "Crecimiento poblacional ponderado por región",
+    title = "Crecimiento poblacional por región ponderado",
     subtitle = "Media de las tasas anuales ponderada por población de cada año",
     x = "Año",
     y = "Crecimiento anual ponderado (%)",
