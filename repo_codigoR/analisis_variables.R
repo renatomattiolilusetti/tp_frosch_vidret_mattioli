@@ -593,6 +593,251 @@ comparacion_crecimiento <- crecimiento_regional_ponderado |>
 
 View(comparacion_crecimiento)
 
+##Gráfico comparación tasa de mortalidad y PBI pero cápita PPA#################
+
+#Seleccionar el año y formar cuartiles de PIB per cápita PPA
+anio_elegido <- 2024
+
+base_cuartiles <- wdi_limpia |>
+  filter(
+    anio == anio_elegido,
+    !is.na(codigo_pais),
+    !is.na(region),
+    region != "Aggregates",
+    is.finite(pib_per_capita_ppa),
+    pib_per_capita_ppa > 0
+  ) |>
+  arrange(pib_per_capita_ppa, codigo_pais)
+
+#Comprobar que haya una sola observación por país
+stopifnot(
+  nrow(base_cuartiles) >= 4,
+  anyDuplicated(base_cuartiles$codigo_pais) == 0
+)
+
+base_cuartiles <- base_cuartiles |>
+  mutate(
+    cuartil = factor(
+      ntile(pib_per_capita_ppa, 4),
+      levels = 1:4,
+      labels = c("Q1", "Q2", "Q3", "Q4")
+    ),
+    poblacion_valida = is.finite(poblacion_total) &
+      poblacion_total > 0,
+    datos_completos = poblacion_valida &
+      is.finite(mortalidad) &
+      is.finite(poblacion_65_mas)
+  )
+
+#Revisar composición y cobertura de cada cuartil
+cobertura_cuartiles <- base_cuartiles |>
+  group_by(cuartil) |>
+  summarise(
+    paises_clasificados = n(),
+    paises_utilizados = sum(datos_completos),
+    paises_sin_poblacion_valida = sum(!poblacion_valida),
+    pib_ppa_min = min(pib_per_capita_ppa),
+    pib_ppa_max = max(pib_per_capita_ppa),
+    poblacion_conocida = sum(
+      poblacion_total[poblacion_valida]
+    ),
+    poblacion_utilizada = sum(
+      poblacion_total[datos_completos]
+    ),
+    .groups = "drop"
+  ) |>
+  mutate(
+    cobertura_poblacion_pct = if_else(
+      poblacion_conocida > 0,
+      100 * poblacion_utilizada / poblacion_conocida,
+      NA_real_
+    )
+  )
+
+#Usar los mismos países para mortalidad y envejecimiento
+
+datos_comparacion <- base_cuartiles |>
+  filter(datos_completos)
+
+#Evitar graficar si algún cuartil queda sin datos
+if (n_distinct(datos_comparacion$cuartil) < 4) {
+  stop("Algún cuartil no tiene países con datos completos. Revisá la cobertura.")
+}
+
+#Calcular las medias ponderadas por población
+resumen_cuartiles <- datos_comparacion |>
+  group_by(cuartil) |>
+  summarise(
+    mortalidad_ponderada = weighted.mean(
+      mortalidad,
+      w = poblacion_total
+    ),
+    mayores_65_ponderado = weighted.mean(
+      poblacion_65_mas,
+      w = poblacion_total
+    ),
+    .groups = "drop"
+  )
+
+#Tabla de resultados y controles
+tabla_comparacion_cuartiles <- cobertura_cuartiles |>
+  left_join(resumen_cuartiles, by = "cuartil")
+
+print(
+  tabla_comparacion_cuartiles |>
+    mutate(across(where(is.numeric), ~ round(.x, 2))),
+  width = Inf
+)
+
+#Preparar los dos paneles
+
+datos_grafico_cuartiles <- resumen_cuartiles |>
+  pivot_longer(
+    cols = c(mortalidad_ponderada, mayores_65_ponderado),
+    names_to = "indicador",
+    values_to = "valor"
+  ) |>
+  mutate(
+    indicador = factor(
+      indicador,
+      levels = c(
+        "mortalidad_ponderada",
+        "mayores_65_ponderado"
+      ),
+      labels = c(
+        "Mortalidad bruta\n(defunciones por cada 1.000 habitantes)",
+        "Población de 65 años o más\n(% de la población)"
+      )
+    ),
+    etiqueta = scales::number(
+      valor,
+      accuracy = 0.1,
+      decimal.mark = ","
+    )
+  )
+
+colores_cuartiles <- c(
+  "Q1" = "#C6DBEF",
+  "Q2" = "#6BAED6",
+  "Q3" = "#2171B5",
+  "Q4" = "#08306B"
+)
+
+install.packages("patchwork")
+library(patchwork)
+
+#Función para crear cada gráfico con su propia unidad
+
+crear_panel <- function(variable, titulo, etiqueta_y) {
+  
+  ggplot(
+    resumen_cuartiles,
+    aes(
+      x = cuartil,
+      y = .data[[variable]],
+      fill = cuartil
+    )
+  ) +
+    geom_col(width = 0.6) +
+    geom_text(
+      aes(
+        label = scales::number(
+          .data[[variable]],
+          accuracy = 0.1,
+          decimal.mark = ","
+        )
+      ),
+      vjust = -0.5,
+      size = 5.5,
+      fontface = "bold"
+    ) +
+    scale_fill_manual(values = colores_cuartiles) +
+    scale_x_discrete(
+      labels = c(
+        "Q1" = "Q1\nMenor PIB",
+        "Q2" = "Q2",
+        "Q3" = "Q3",
+        "Q4" = "Q4\nMayor PIB"
+      )
+    ) +
+    scale_y_continuous(
+      labels = scales::label_number(decimal.mark = ","),
+      expand = expansion(mult = c(0, 0.16))
+    ) +
+    labs(
+      title = titulo,
+      x = "Cuartil de PIB per cápita PPA",
+      y = etiqueta_y
+    ) +
+    theme_minimal(base_size = 17) +
+    theme(
+      plot.title = element_text(
+        face = "bold",
+        size = 19,
+        hjust = 0.5,
+        margin = margin(b = 15)
+      ),
+      axis.title.x = element_text(
+        size = 14,
+        margin = margin(t = 12)
+      ),
+      axis.title.y = element_text(
+        size = 14,
+        margin = margin(r = 12)
+      ),
+      axis.text = element_text(size = 14, color = "gray20"),
+      panel.grid.major.x = element_blank(),
+      panel.grid.minor = element_blank(),
+      legend.position = "none",
+      plot.margin = margin(15, 20, 15, 15)
+    )
+}
+
+grafico_mortalidad <- crear_panel(
+  variable = "mortalidad_ponderada",
+  titulo = "Mortalidad bruta",
+  etiqueta_y = "Defunciones por cada 1.000 habitantes"
+)
+
+grafico_envejecimiento <- crear_panel(
+  variable = "mayores_65_ponderado",
+  titulo = "Población de 65 años o más",
+  etiqueta_y = "Población de 65 años o más (%)"
+)
+
+# Unir ambos gráficos
+grafico_cuartiles <- (
+  grafico_mortalidad | grafico_envejecimiento
+) +
+  plot_annotation(
+    title = "Ingreso, mortalidad y envejecimiento",
+    subtitle = paste0(
+      anio_elegido,
+      " | Indicadores ponderados por población | ",
+      nrow(datos_comparacion),
+      " países con datos completos"
+    ),
+    caption = paste0(
+      "Fuente: WDI, Banco Mundial. Cuartiles con cantidades similares ",
+      "de países; no equivalen a los grupos de ingreso del Banco Mundial.\n",
+      "Ambos indicadores utilizan los mismos países y pesos poblacionales. ",
+      "La mortalidad bruta no está ajustada por edad."
+    ),
+    theme = theme(
+      plot.title = element_text(face = "bold", size = 25),
+      plot.subtitle = element_text(
+        size = 15,
+        margin = margin(b = 15)
+      ),
+      plot.caption = element_text(
+        size = 10,
+        hjust = 0,
+        margin = margin(t = 12)
+      ),
+      plot.margin = margin(15, 20, 15, 15)
+    )
+  )
+
 ################################################################################
 # Explicación de las variables
 ################################################################################
