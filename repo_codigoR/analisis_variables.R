@@ -838,6 +838,125 @@ grafico_cuartiles <- (
     )
   )
 
+
+# Comparación estática con media de edad +65 por grupo económico ###############
+
+anio_inicial <- 1990
+anio_actual  <- 2024
+
+base_65 <- wdi_limpia |>
+  filter(
+    anio %in% c(anio_inicial, anio_actual),
+    !is.na(poblacion_65_mas),
+    !is.na(ingreso),
+    ingreso != "Sin clasificar"
+  )
+
+resumen_65 <- base_65 |>
+  group_by(anio, ingreso) |>
+  summarise(
+    n_paises = n(),
+    mediana_65 = median(poblacion_65_mas, na.rm = TRUE),
+    .groups = "drop"
+  )
+
+limite_y <- ceiling(max(resumen_65$mediana_65, na.rm = TRUE) / 5) * 5
+
+grafico_actual <- resumen_65 |>
+  filter(anio == anio_actual) |>
+  ggplot(aes(x = ingreso, y = mediana_65)) +
+  geom_col() +
+  geom_text(
+    aes(label = paste0(round(mediana_65, 1), "%")),
+    vjust = -0.4
+  ) +
+  scale_y_continuous(
+    limits = c(0, limite_y),
+    expand = expansion(mult = c(0, 0.08))
+  ) +
+  labs(
+    title = paste0("Población de 65 años y más en ", anio_actual),
+    subtitle = "Mediana de los países según su grupo de ingreso actual",
+    x = "Grupo de ingreso",
+    y = "% de población de 65 años y más"
+  ) +
+  theme_minimal()
+
+grafico_1990 <- resumen_65 |>
+  filter(anio == anio_inicial) |>
+  ggplot(aes(x = ingreso, y = mediana_65)) +
+  geom_col() +
+  geom_text(
+    aes(label = paste0(round(mediana_65, 1), "%")),
+    vjust = -0.4
+  ) +
+  scale_y_continuous(
+    limits = c(0, limite_y),
+    expand = expansion(mult = c(0, 0.08))
+  ) +
+  labs(
+    title = "Población de 65 años y más en 1990",
+    subtitle = "Mediana de los países según su grupo de ingreso actual",
+    x = "Grupo de ingreso",
+    y = "% de población de 65 años y más"
+  ) +
+  theme_minimal()
+
+grafico_1990
+grafico_actual
+
+# GRÁFICO 1: 1990
+grafico_1990 <- resumen_65 |>
+  filter(anio == anio_inicial) |>
+  ggplot(aes(x = ingreso, y = mediana_65)) +
+  geom_col() +
+  geom_text(
+    aes(label = paste0(round(mediana_65, 1), "%")),
+    vjust = -0.2,
+    size = 3.5
+  ) +
+  scale_y_continuous(
+    limits = c(0, limite_y),
+    expand = expansion(mult = c(0, 0.02))
+  ) +
+  labs(
+    title = "Población de 65 años y más en 1990",
+    subtitle = "Mediana de los países según su grupo de ingreso actual",
+    x = "Grupo de ingreso",
+    y = "% de población de 65 años y más"
+  ) +
+  theme_minimal() +
+  theme(
+    plot.margin = margin(5, 5, 5, 5)
+  )
+
+
+# GRÁFICO 2: ACTUALIDAD
+grafico_actual <- resumen_65 |>
+  filter(anio == anio_actual) |>
+  ggplot(aes(x = ingreso, y = mediana_65)) +
+  geom_col() +
+  geom_text(
+    aes(label = paste0(round(mediana_65, 1), "%")),
+    vjust = -0.2,
+    size = 3.5
+  ) +
+  scale_y_continuous(
+    limits = c(0, limite_y),
+    expand = expansion(mult = c(0, 0.02))
+  ) +
+  labs(
+    title = paste0("Población de 65 años y más en ", anio_actual),
+    subtitle = "Mediana de los países según su grupo de ingreso actual",
+    x = "Grupo de ingreso",
+    y = "% de población de 65 años y más"
+  ) +
+  theme_minimal() +
+  theme(
+    plot.margin = margin(5, 5, 5, 5)
+  )
+
+
 ################################################################################
 # Explicación de las variables
 ################################################################################
