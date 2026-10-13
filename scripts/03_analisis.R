@@ -1,20 +1,17 @@
-wdi_limpia <- read_csv("C:/Users/renam/OneDrive/Escritorio/tp_frosch_vidret_mattioli/repo_wdi/wdi_limpia.csv")
-
 ################################################################################
-# Para el conocimiento general de la base
-################################################################################
+# Para el conocimiento general de la base ######################################
 
-#Contamos dimension
+wdi_limpia <- read_csv("repo_wdi/wdi_limpia.csv")
+
+# Contamos dimension
 dim(wdi_limpia)  
 
-
-#Contamos si tenemos filas duplicadas
+# Contamos si tenemos filas duplicadas
 wdi_limpia |>
   count(codigo_pais, anio) |>
   filter(n > 1)
 
-
-#Contamos países, primer año, último año y cantidad de años de las observaciones
+# Contamos países, primer año, último año y cantidad de años de las observaciones
 wdi_limpia |>
   summarise(
     cantidad_paises = n_distinct(codigo_pais),
@@ -23,20 +20,20 @@ wdi_limpia |>
     cantidad_anios = n_distinct(anio)
   )
 
-
-#Contamos columnas (como las variables que precisamos para las pirámides explican lo mismo pero en diferentes rangos,
-#nos quedamos solo con 2, por eso sumamos despues del ncol())
+# Contamos columnas (como las variables que precisamos para las pirámides explican lo mismo pero en diferentes rangos,
+# nos quedamos solo con 2, por eso sumamos despues del ncol())
 wdi_limpia |>
   select(-(35:68), -(1:4)) |>
   ncol() + 2 
 
 
 ################################################################################
-# Para el análisis de los NA
-################################################################################
+# Para el análisis de los NA ###################################################
 
+# Para tener un primer panorama de los NA, contamos los faltantes por variable 
+# de forma ordenada (y excluyendo a aquellas que tienen un % de aparición
+# menor al 5%)
 
-#Contamos los faltantes por variable
 faltantes_variables <- tibble(
   variable = names(wdi_limpia),
   cantidad_na = colSums(is.na(wdi_limpia)),
@@ -51,8 +48,7 @@ faltantes_variables <- tibble(
     porcentaje_na = round(porcentaje_na, 2)
   )
 
-
-#Para hacer la tabla_na_region (contamos solo esas columnas porque las otras arrojaban NA=0)
+# Para hacer la tabla_na_region (contamos solo esas columnas porque las otras arrojaban NA=0)
 variables_analisis <- names(wdi_limpia)[1:34]
 
 variables_analisis <- setdiff(
@@ -263,7 +259,7 @@ ggsave(
   bg = "white"
 )
 
-#Regiones para copiar y pegar y reproducir todos los gráficos:
+# Regiones para copiar y pegar y reproducir todos los gráficos:
 # Oriente Medio, Norte de África, Afganistán y Pakistán
 # África Subsahariana
 # América del Norte
@@ -957,7 +953,7 @@ grafico_actual <- resumen_65 |>
 
 
 ################################################################################
-# Explicación de las variables
+# Explicación de las variables ####
 ################################################################################
 
 # Diccionario de variables

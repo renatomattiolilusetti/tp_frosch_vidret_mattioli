@@ -1,11 +1,11 @@
-install.packages(c("tidyverse", "WDI", "skimr", "readr"))
+################################################################################
+# Limpieza de Base #############################################################
+
+install.packages(c("tidyverse", "skimr", "readr"))
 
 library(tidyverse)
 library(skimr)
 library(dplyr)
-
-################################################################################
-### Limpieza de Base ###########################################################
 
 # Definimos un vector para excluir los territorios no soberanos y/o economías 
 # agregadas que no son países. 
@@ -35,12 +35,14 @@ territorios_excluir <- c(
   "VIR"  # Islas Vírgenes de Estados Unidos
 )
 
-# Limpieza ###
+# Limpieza ####
 
 # A partir de wdi_raw, excluimos de la selección algunas columnas que irrelevantes.
 # Luego, no conservamos las regiones "Aggregates", como asi también qualquier fila 
 # donde el dato de la región sea nulo (NA) o esté completamente en vacío. También, 
 # Eliminamos los territorios del vector definido anteriormente.
+
+wdi_limpia <- read_csv("raw/wdi_raw.csv")
 
 wdi_limpia <- wdi_raw |>
   select(
