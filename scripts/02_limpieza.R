@@ -68,7 +68,7 @@ wdi_limpia <- wdi_raw |>
       "North America" = "América del Norte",
       "South Asia" = "Asia Meridional",
       "Sub-Saharan Africa" = "África Subsahariana"
-  ),
+    ),
     
     region = factor(region),
     
