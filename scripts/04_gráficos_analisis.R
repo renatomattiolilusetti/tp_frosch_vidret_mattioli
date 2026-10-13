@@ -1,9 +1,13 @@
 ################################################################################
-# Gráficos correspondientes a la sección de Análisis de variables ####
+# Gráficos correspondientes a la sección de Análisis de variables ##############
+
+# install.packages("patchwork")
+library(patchwork)
 
 wdi_limpia <- read_csv("repo_wdi/wdi_limpia.csv")
 
-# Población total por región y año
+# Población total por región y año ###
+
 poblacion_region <- wdi_limpia |>
   filter(
     between(anio, 1960, 2025),
@@ -21,7 +25,8 @@ poblacion_region <- wdi_limpia |>
     .groups = "drop"
   )
 
-# Gráfico de líneas por región
+# Gráfico de Evolución de la población por región ####
+
 grafico_poblacion_region <- ggplot(
   poblacion_region,
   aes(
@@ -67,9 +72,10 @@ grafico_poblacion_region <- ggplot(
 
 print(grafico_poblacion_region)
 
-# Grafico sobre crecimiento natural ############################################
+# Grafico sobre natalidad y mortalidad por región ####
 
-#Calcular pesos poblacionales por región y año
+# Calcular pesos poblacionales por región y año.
+
 pesos_crecimiento_natural <- wdi_limpia |>
   filter(
     !is.na(region),
@@ -88,7 +94,8 @@ pesos_crecimiento_natural <- wdi_limpia |>
   ) |>
   ungroup()
 
-#Calcular las tasas regionales ponderadas
+# Calcular las tasas regionales ponderadas
+
 crecimiento_natural_regional <- pesos_crecimiento_natural |>
   group_by(region, anio) |>
   summarise(
@@ -100,7 +107,8 @@ crecimiento_natural_regional <- pesos_crecimiento_natural |>
     crecimiento_natural_pct = natalidad_pct - mortalidad_pct
   )
 
-#Pasar las dos tasas a formato largo para graficarlas
+# Pasar las dos tasas a formato largo para graficarlas
+
 df_brecha_regional <- crecimiento_natural_regional |>
   select(region, anio, natalidad_pct, mortalidad_pct) |>
   pivot_longer(
@@ -109,7 +117,8 @@ df_brecha_regional <- crecimiento_natural_regional |>
     values_to = "valor"
   )
 
-#Graficar paneles por región
+# Graficar paneles por región
+
 grafico_crecimiento_natural <- ggplot(
   df_brecha_regional,
   aes(x = anio, y = valor, color = tasa)
@@ -159,9 +168,10 @@ grafico_crecimiento_natural <- ggplot(
 
 print(grafico_crecimiento_natural)
 
-# Gráfico sobre tasa de crecimiento anual por regiones #########################
+# # Gráfico media de la tasa de crecimiento poblacional ponderada por población ####
 
 # Resume el crecimiento poblacional de cada país por década
+
 crecimiento_por_decada <- wdi_limpia |>
   filter(anio >= 1960, anio <= 2025) |>
   mutate(
@@ -193,9 +203,8 @@ crecimiento_por_decada <- wdi_limpia |>
   ) |>
   arrange(pais, decada)
 
-##Media de la tasa de crecimiento poblacional ponderada por población##
-
 # Calcular el peso poblacional de cada país en cada año
+
 pesos_poblacionales <- wdi_limpia |>
   filter(anio >= 1960, anio <= 2025) |>
   select(
@@ -217,6 +226,7 @@ pesos_poblacionales <- wdi_limpia |>
   ungroup()
 
 # Sumar los aportes para obtener la media ponderada regional
+
 crecimiento_regional_ponderado <- pesos_poblacionales |>
   group_by(region, anio) |>
   summarise(
@@ -227,6 +237,7 @@ crecimiento_regional_ponderado <- pesos_poblacionales |>
   )
 
 # Graficar la evolución anual
+
 grafico_crecimiento_ponderado <- ggplot(
   crecimiento_regional_ponderado,
   aes(
@@ -278,6 +289,7 @@ cobertura_crecimiento <- wdi_limpia |>
   )
 
 # Comparar la tasa de crecimiento entre el período inicial y el reciente
+
 comparacion_crecimiento <- crecimiento_regional_ponderado |>
   filter(
     between(anio, 1961, 1970) |
@@ -317,9 +329,10 @@ comparacion_crecimiento <- crecimiento_regional_ponderado |>
 
 View(comparacion_crecimiento)
 
-##Gráfico comparación tasa de mortalidad y PBI pero cápita PPA#################
+# Gráfico comparativo entre tasa de mortalidad y PBI per cápita PPA ####
 
-#Seleccionar el año y formar cuartiles de PIB per cápita PPA
+# Seleccionar el año y formar cuartiles de PIB per cápita PPA
+
 anio_elegido <- 2024
 
 base_cuartiles <- wdi_limpia |>
@@ -333,7 +346,8 @@ base_cuartiles <- wdi_limpia |>
   ) |>
   arrange(pib_per_capita_ppa, codigo_pais)
 
-#Comprobar que haya una sola observación por país
+# Comprobar que haya una sola observación por país
+
 stopifnot(
   nrow(base_cuartiles) >= 4,
   anyDuplicated(base_cuartiles$codigo_pais) == 0
@@ -353,7 +367,8 @@ base_cuartiles <- base_cuartiles |>
       is.finite(poblacion_65_mas)
   )
 
-#Revisar composición y cobertura de cada cuartil
+# Revisar composición y cobertura de cada cuartil
+
 cobertura_cuartiles <- base_cuartiles |>
   group_by(cuartil) |>
   summarise(
@@ -378,7 +393,7 @@ cobertura_cuartiles <- base_cuartiles |>
     )
   )
 
-#Usar los mismos países para mortalidad y envejecimiento
+# Usar los mismos países para mortalidad y envejecimiento
 
 datos_comparacion <- base_cuartiles |>
   filter(datos_completos)
@@ -403,7 +418,7 @@ resumen_cuartiles <- datos_comparacion |>
     .groups = "drop"
   )
 
-#Tabla de resultados y controles
+# Tabla de resultados y controles
 tabla_comparacion_cuartiles <- cobertura_cuartiles |>
   left_join(resumen_cuartiles, by = "cuartil")
 
@@ -413,7 +428,7 @@ print(
   width = Inf
 )
 
-#Preparar los dos paneles
+# Preparar los dos paneles
 
 datos_grafico_cuartiles <- resumen_cuartiles |>
   pivot_longer(
@@ -447,10 +462,7 @@ colores_cuartiles <- c(
   "Q4" = "#08306B"
 )
 
-install.packages("patchwork")
-library(patchwork)
-
-#Función para crear cada gráfico con su propia unidad
+# Función para crear cada gráfico con su propia unidad
 
 crear_panel <- function(variable, titulo, etiqueta_y) {
   
@@ -562,8 +574,9 @@ grafico_cuartiles <- (
     )
   )
 
+print(grafico_cuartiles)
 
-# Comparación estática con media de edad +65 por grupo económico ###############
+# Comparación estática con media de edad +65 por grupo económico ####
 
 anio_inicial <- 1990
 anio_actual  <- 2024
