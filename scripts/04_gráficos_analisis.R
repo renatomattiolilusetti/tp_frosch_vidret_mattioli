@@ -3,6 +3,7 @@
 
 # install.packages("patchwork")
 library(patchwork)
+library(ggplot2)
 
 wdi_limpia <- read_csv("repo_wdi/wdi_limpia.csv")
 

@@ -42,7 +42,7 @@ territorios_excluir <- c(
 # donde el dato de la región sea nulo (NA) o esté completamente en vacío. También, 
 # Eliminamos los territorios del vector definido anteriormente.
 
-wdi_limpia <- read_csv("raw/wdi_raw.csv")
+wdi_raw <- read_csv("raw/wdi_raw.csv")
 
 wdi_limpia <- wdi_raw |>
   select(
