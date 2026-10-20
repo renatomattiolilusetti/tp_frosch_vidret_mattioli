@@ -139,26 +139,32 @@ mice::pool.r.squared(
   adjusted = TRUE
 )
 
-### Tabla de comparación y resultados ##########################################
-coeficientes_casos <- summary(modelo_2000)$coefficients
+modelo_mice_hc1_2000 <- with(
+  imp_2000_poblacion,
+  {
+    ajuste <- lm(
+      poblacion_65_mas ~ fecundidad + esperanza_vida +
+        migracion_relativa + log_pib_pc +
+        gasto_bolsillo_salud + gasto_publico_salud_pib +
+        region
+    )
+    
+    lmtest::coeftest(
+      ajuste,
+      vcov. = sandwich::vcovHC(ajuste, type = "HC1"),
+      save = TRUE
+    )
+  }
+)
 
-tabla_comparacion_2000 <- tibble(
-  variable = rownames(coeficientes_casos),
-  beta_casos = coeficientes_casos[, "Estimate"],
-  p_casos = coeficientes_casos[, "Pr(>|t|)"]
-) |>
-  left_join(
-    summary(resultado_mice_poblacion_2000) |>
-      transmute(variable = term, beta_mice = estimate, p_mice = p.value),
-    by = "variable"
-  ) |>
-  filter(variable %in% c(
-    "fecundidad", "esperanza_vida", "migracion_relativa",
-    "log_pib_pc", "gasto_bolsillo_salud", "gasto_publico_salud_pib"
-  )) |>
-  mutate(across(where(is.numeric), ~ signif(.x, 3)))
+# Combinar los resultados con las reglas de Rubin
+resultado_mice_hc1_2000 <- mice::pool(
+  modelo_mice_hc1_2000,
+  dfcom = 182
+)
 
-print(tabla_comparacion_2000)
+# Mostrar resultados
+summary(resultado_mice_hc1_2000, conf.int = TRUE)
 
 #### Regresion 2010 ############################################################
 
@@ -403,35 +409,33 @@ mice::pool.r.squared(
   adjusted = TRUE
 )
 
-# Comparar cobertura de posibles años
-
-cobertura_anios <- wdi_limpia |>
-  filter(anio %in% c(2019, 2022, 2023)) |>
-  mutate(
-    migracion_relativa = 100 * migracion_neta / poblacion_total,
-    log_pib_pc = if_else(
-      pib_per_capita_ppa > 0,
-      log(pib_per_capita_ppa),
-      NA_real_
+# Calcular errores robustos en las 20 regresiones
+modelo_mice_hc1_2010 <- with(
+  imp_2010_poblacion,
+  {
+    ajuste <- lm(
+      poblacion_65_mas ~ fecundidad + esperanza_vida +
+        migracion_relativa + log_pib_pc +
+        gasto_bolsillo_salud + gasto_publico_salud_pib +
+        region
     )
-  ) |>
-  group_by(anio) |>
-  summarise(
-    paises = n(),
-    completos = sum(complete.cases(
-      poblacion_65_mas,
-      fecundidad,
-      esperanza_vida,
-      migracion_relativa,
-      log_pib_pc,
-      gasto_bolsillo_salud,
-      gasto_publico_salud_pib,
-      region
-    )),
-    .groups = "drop"
-  )
+    
+    lmtest::coeftest(
+      ajuste,
+      vcov. = sandwich::vcovHC(ajuste, type = "HC1"),
+      save = TRUE
+    )
+  }
+)
 
-cobertura_anios
+# Combinar resultados mediante las reglas de Rubin
+resultado_mice_hc1_2010 <- mice::pool(
+  modelo_mice_hc1_2010,
+  dfcom = 182
+)
+
+# Mostrar resultados combinados
+summary(resultado_mice_hc1_2010, conf.int = TRUE)
 
 #### Regresion 2019 ############################################################
 
@@ -513,7 +517,7 @@ test_mcar_2019 <- naniar::mcar_test(
 
 test_mcar_2019
 
-#### Regresion 2010 ############################################################
+#### Regresion 2019 ############################################################
 
 # Conservar los países con información completa
 base_2019_completa <- base_2019_modelo |>
@@ -620,6 +624,34 @@ mice::pool.r.squared(
   adjusted = TRUE
 )
 
+# Estimar las 20 regresiones con errores robustos HC1
+modelo_mice_hc1_2019 <- with(
+  imp_2019_poblacion,
+  {
+    ajuste <- lm(
+      poblacion_65_mas ~ fecundidad + esperanza_vida +
+        migracion_relativa + log_pib_pc +
+        gasto_bolsillo_salud + gasto_publico_salud_pib +
+        region
+    )
+    
+    lmtest::coeftest(
+      ajuste,
+      vcov. = sandwich::vcovHC(ajuste, type = "HC1"),
+      save = TRUE
+    )
+  }
+)
+
+# Combinar los resultados mediante las reglas de Rubin
+resultado_mice_hc1_2019 <- mice::pool(
+  modelo_mice_hc1_2019,
+  dfcom = 182
+)
+
+# Mostrar los resultados robustos combinados
+summary(resultado_mice_hc1_2019, conf.int = TRUE)
+
 ##### Homoscedasticidad #####################################################
 
 # Test de Breusch-Pagan para 2000
@@ -636,6 +668,51 @@ bp_2000
 bp_2010
 bp_2019
 
+# Función que calcula errores estándar robustos HC1
+
+tabla_hc1 <- function(modelo) {
+  lmtest::coeftest(
+    modelo,
+    vcov. = sandwich::vcovHC(modelo, type = "HC1")
+  )
+}
+
+# Reunir todas las regresiones MCO ya estimadas
+
+modelos_mco <- list(
+  
+  # Regresiones principales
+  completo_2000 = modelo_2000,
+  completo_2010 = modelo_2010,
+  completo_2019 = modelo_2019,
+  
+  # Modelos progresivos
+  demografico_2000 = modelo_1_2000,
+  intermedio_2000 = modelo_2_2000,
+  
+  demografico_2010 = modelo_1_2010,
+  intermedio_2010 = modelo_2_2010,
+  
+  demografico_2019 = modelo_1_2019,
+  intermedio_2019 = modelo_2_2019,
+  
+  # Modelos con muestra común de 179 países
+  comunes_2010 = modelo_2010_comunes,
+  comunes_2019 = modelo_2019_comunes
+)
+
+
+# Aplicar HC1 a todos los modelos de la lista
+resultados_hc1 <- lapply(
+  modelos_mco,
+  tabla_hc1
+)
+
+
+# Mostrar las tres regresiones principales
+resultados_hc1$completo_2000
+resultados_hc1$completo_2010
+resultados_hc1$completo_2019
 
 ##### Matrices de correlacion #################################################
 
@@ -730,10 +807,6 @@ modelo_2_2000 <- lm(
 summary(modelo_1_2000)
 summary(modelo_2_2000)
 
-# Contrastes F de variables adicionales
-anova(modelo_1_2000, modelo_2_2000)
-anova(modelo_2_2000, modelo_2000)
-
 ### 2010
 # Modelo 1: demográfico
 modelo_1_2010 <- lm(
@@ -751,10 +824,6 @@ modelo_2_2010 <- lm(
 # Comparar los modelos
 summary(modelo_1_2010)
 summary(modelo_2_2010)
-
-# Contrastes F de variables adicionales
-anova(modelo_1_2010, modelo_2_2010)
-anova(modelo_2_2010, modelo_2010)
 
 ### 2019
 # Modelo 1: variables demográficas
@@ -777,50 +846,61 @@ modelo_2_2019 <- lm(
 summary(modelo_1_2019)
 summary(modelo_2_2019)
 
-# Comparación de los tres modelos progresivos
-anova(modelo_1_2019, modelo_2_2019)
-anova(modelo_2_2019, modelo_2019)
+# Función para comparar dos modelos con prueba de Wald robusta
+wald_hc1 <- function(modelo_reducido, modelo_completo) {
+  lmtest::waldtest(
+    modelo_reducido,
+    modelo_completo,
+    vcov = sandwich::vcovHC(modelo_completo, type = "HC1")
+  )
+}
 
-##### Comparacion entre periodos ###############################################
+# Año 2000
+wald_hc1(modelo_1_2000, modelo_2_2000)
+wald_hc1(modelo_2_2000, modelo_2000)
 
-# Identificar países presentes en las tres regresiones
-paises_comunes <- intersect(
-  intersect(
-    base_2000_completa$pais,
-    base_2010_completa$pais
-  ),
-  base_2019_completa$pais
+# Año 2010
+wald_hc1(modelo_1_2010, modelo_2_2010)
+wald_hc1(modelo_2_2010, modelo_2010)
+
+# Año 2019
+wald_hc1(modelo_1_2019, modelo_2_2019)
+wald_hc1(modelo_2_2019, modelo_2019)
+
+##### Tablas de modelos progresivos con HC1 ####################
+
+# Variables que queremos comparar
+variables_tabla <- c(
+  "fecundidad",
+  "esperanza_vida",
+  "migracion_relativa",
+  "log_pib_pc",
+  "gasto_bolsillo_salud",
+  "gasto_publico_salud_pib"
 )
 
-# Contar los países comunes
-length(paises_comunes)
-
-# Seleccionar los mismos 179 países en cada año
-
-base_2010_comunes <- base_2010_completa |>
-  filter(pais %in% paises_comunes)
-
-base_2019_comunes <- base_2019_completa |>
-  filter(pais %in% paises_comunes)
-
-# Verificar cantidad de países
-
-nrow(base_2010_comunes)
-nrow(base_2019_comunes)
-
-# Reestimar los modelos con la muestra común
-
-modelo_2010_comunes <- update(
-  modelo_2010,
-  data = base_2010_comunes
-)
-
-modelo_2019_comunes <- update(
-  modelo_2019,
-  data = base_2019_comunes
-)
-
-# Consultar resultados
-
-summary(modelo_2010_comunes)
-summary(modelo_2019_comunes)
+# Mostrar los tres modelos de cada año
+for (anio in c(2000, 2010, 2019)) {
+  
+  for (etapa in c("demografico", "intermedio", "completo")) {
+    
+    nombre <- paste0(etapa, "_", anio)
+    
+    tabla <- resultados_hc1[[nombre]]
+    
+    variables_presentes <- variables_tabla[
+      variables_tabla %in% rownames(tabla)
+    ]
+    
+    cat("\n\nMODELO:", nombre, "\n")
+    
+    print(signif(
+      tabla[
+        variables_presentes,
+        c("Estimate", "Std. Error", "Pr(>|t|)"),
+        drop = FALSE
+      ],
+      4
+    ))
+  }
+}
