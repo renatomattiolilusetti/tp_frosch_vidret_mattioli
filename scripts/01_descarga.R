@@ -1,7 +1,7 @@
 ################################################################################
 # Descarga #####################################################################
 
-install.packages(c("tidyverse", "skimr", "readr", "mice", "naniar", "WDI"))
+install.packages(c("tidyverse", "skimr", "readr", "mice", "naniar", "WDI", "car", "lmtest", "sandwich"))
 
 library(tidyverse)
 library(skimr)
@@ -9,6 +9,9 @@ library(dplyr)
 library(mice)
 library(naniar)
 library(WDI)
+library(car)
+library(lmtest)
+library(sandwich)
 
 # Para generar una primer base cruda, a partir de las variables seleccionadas, 
 # durante el lapso de tiempo seleccionado

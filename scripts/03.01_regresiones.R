@@ -620,9 +620,168 @@ mice::pool.r.squared(
   adjusted = TRUE
 )
 
-# =========================================================
-# COMPARABILIDAD ENTRE LOS TRES PERIODOS
-# =========================================================
+##### Homoscedasticidad #####################################################
+
+# Test de Breusch-Pagan para 2000
+bp_2000 <- lmtest::bptest(modelo_2000)
+
+# Test de Breusch-Pagan para 2010
+bp_2010 <- lmtest::bptest(modelo_2010)
+
+# Test de Breusch-Pagan para 2019
+bp_2019 <- lmtest::bptest(modelo_2019)
+
+# Mostrar resultados
+bp_2000
+bp_2010
+bp_2019
+
+
+##### Matrices de correlacion #################################################
+
+### 2000
+# Seleccionar las variables explicativas numéricas
+variables_explicativas_2000 <- base_2000_completa |>
+  select(
+    fecundidad,
+    esperanza_vida,
+    migracion_relativa,
+    log_pib_pc,
+    gasto_bolsillo_salud,
+    gasto_publico_salud_pib
+  )
+
+# Calcular la matriz de correlaciones
+matriz_correlaciones_2000 <- cor(
+  variables_explicativas_2000
+)
+
+# Mostrar resultados con dos decimales
+round(matriz_correlaciones_2000, 2)
+
+vif_2000 <- car::vif(modelo_2000)
+
+vif_2000
+
+### 2010
+variables_explicativas_2010 <- base_2010_completa |>
+  select(
+    fecundidad,
+    esperanza_vida,
+    migracion_relativa,
+    log_pib_pc,
+    gasto_bolsillo_salud,
+    gasto_publico_salud_pib
+  )
+
+# Calcular la matriz de correlaciones
+matriz_correlaciones_2010 <- cor(
+  variables_explicativas_2010
+)
+
+# Mostrar resultados con dos decimales
+round(matriz_correlaciones_2010, 2)
+
+vif_2010 <- car::vif(modelo_2010)
+
+vif_2010
+
+### 2019
+# Seleccionar las variables explicativas numéricas
+variables_explicativas_2019 <- base_2019_completa |>
+  select(
+    fecundidad,
+    esperanza_vida,
+    migracion_relativa,
+    log_pib_pc,
+    gasto_bolsillo_salud,
+    gasto_publico_salud_pib
+  )
+
+# Calcular la matriz de correlaciones
+matriz_correlaciones_2019 <- cor(
+  variables_explicativas_2019
+)
+
+# Mostrar resultados con dos decimales
+round(matriz_correlaciones_2019, 2)
+
+vif_2019 <- car::vif(modelo_2019)
+
+vif_2019
+
+##### Modelos progresivos #####################################################
+
+### 2000
+# Modelo 1: demográfico
+modelo_1_2000 <- lm(
+  poblacion_65_mas ~ fecundidad + esperanza_vida + region,
+  data = base_2000_completa
+)
+
+# Modelo 2: incorporar migración y PIB
+modelo_2_2000 <- lm(
+  poblacion_65_mas ~ fecundidad + esperanza_vida +
+    migracion_relativa + log_pib_pc + region,
+  data = base_2000_completa
+)
+
+# Comparar los modelos
+summary(modelo_1_2000)
+summary(modelo_2_2000)
+
+# Contrastes F de variables adicionales
+anova(modelo_1_2000, modelo_2_2000)
+anova(modelo_2_2000, modelo_2000)
+
+### 2010
+# Modelo 1: demográfico
+modelo_1_2010 <- lm(
+  poblacion_65_mas ~ fecundidad + esperanza_vida + region,
+  data = base_2010_completa
+)
+
+# Modelo 2: incorporar migración y PIB
+modelo_2_2010 <- lm(
+  poblacion_65_mas ~ fecundidad + esperanza_vida +
+    migracion_relativa + log_pib_pc + region,
+  data = base_2010_completa
+)
+
+# Comparar los modelos
+summary(modelo_1_2010)
+summary(modelo_2_2010)
+
+# Contrastes F de variables adicionales
+anova(modelo_1_2010, modelo_2_2010)
+anova(modelo_2_2010, modelo_2010)
+
+### 2019
+# Modelo 1: variables demográficas
+modelo_1_2019 <- lm(
+  poblacion_65_mas ~ fecundidad + esperanza_vida + region,
+  data = base_2019_completa
+)
+
+# Modelo 2: agregar migración y PIB per cápita
+modelo_2_2019 <- lm(
+  poblacion_65_mas ~ fecundidad + esperanza_vida +
+    migracion_relativa + log_pib_pc + region,
+  data = base_2019_completa
+)
+
+# Modelo 3: ya estimado anteriormente
+# modelo_2019
+
+# Ver resultados
+summary(modelo_1_2019)
+summary(modelo_2_2019)
+
+# Comparación de los tres modelos progresivos
+anova(modelo_1_2019, modelo_2_2019)
+anova(modelo_2_2019, modelo_2019)
+
+##### Comparacion entre periodos ###############################################
 
 # Identificar países presentes en las tres regresiones
 paises_comunes <- intersect(
