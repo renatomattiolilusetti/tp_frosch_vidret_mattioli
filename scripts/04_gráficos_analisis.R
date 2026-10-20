@@ -1,7 +1,7 @@
-################################################################################
-# Gráficos correspondientes a la sección de Análisis de variables ##############
+# ==============================================================================
+# Gráficos correspondientes a la sección de Análisis de variables 
+# ==============================================================================
 
-# install.packages("patchwork")
 library(patchwork)
 library(ggplot2)
 
