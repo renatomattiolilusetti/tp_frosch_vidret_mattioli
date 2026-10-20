@@ -1,7 +1,13 @@
 ################################################################################
 # Descarga #####################################################################
 
-install.packages("WDI")
+install.packages(c("tidyverse", "skimr", "readr", "mice", "naniar", "WDI"))
+
+library(tidyverse)
+library(skimr)
+library(dplyr)
+library(mice)
+library(naniar)
 library(WDI)
 
 # Para generar una primer base cruda, a partir de las variables seleccionadas, 
