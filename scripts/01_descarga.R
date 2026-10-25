@@ -42,6 +42,7 @@ wdi_raw <- WDI(
     gasto_salud_pib              = "SH.XPD.CHEX.GD.ZS",
     gasto_publico_salud_pib      = "SH.XPD.GHED.GD.ZS",
     gasto_bolsillo_salud         = "SH.XPD.OOPC.CH.ZS",
+    indice_cobertura_salud       = "SH_UHC_SCI", 
     gasto_educacion_pib          = "SE.XPD.TOTL.GD.ZS",
     gasto_por_alumno_primaria    = "SE.XPD.PRIM.PC.ZS",
     gasto_por_alumno_secundaria  = "SE.XPD.SECO.PC.ZS",
