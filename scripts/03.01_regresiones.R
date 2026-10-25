@@ -1,5 +1,6 @@
 ################################################################################
 #### Regresión lineal en tres momentos #########################################
+wdi_limpia <- read_csv("repo_wdi/wdi_limpia.csv")
 
 #### Tratemiento de outliers ###################################################
 
@@ -1164,6 +1165,59 @@ vif_2019 <- car::vif(modelo_2019)
 
 vif_2019
 
+# MAPA DE CALOR: CORRELACIONES ENTRE REGRESORES (2019)
+
+# Convertir la matriz en una tabla para ggplot
+correlaciones_2019 <- as.data.frame(
+  as.table(matriz_correlaciones_2019)
+) |>
+  filter(as.integer(Var2) > as.integer(Var1))
+
+# Nombres más legibles para el gráfico
+nombres_variables <- c(
+  fecundidad = "Fecundidad",
+  esperanza_vida = "Esperanza de vida",
+  migracion_relativa = "Migración relativa",
+  log_pib_pc = "Log PIB pc PPA",
+  gasto_bolsillo_salud = "Gasto de bolsillo en salud",
+  gasto_publico_salud_pib = "Gasto público en salud"
+)
+
+# Construir el mapa de calor
+grafico_correlaciones_2019 <- ggplot(
+  correlaciones_2019,
+  aes(x = Var1, y = Var2, fill = Freq)
+) +
+  geom_tile(color = "white") +
+  geom_text(
+    aes(label = round(Freq, 2)),
+    size = 3.5
+  ) +
+  scale_fill_gradient2(
+    low = "#B2182B",
+    mid = "white",
+    high = "#2166AC",
+    midpoint = 0,
+    limits = c(-1, 1),
+    name = "Correlación"
+  ) +
+  scale_x_discrete(labels = nombres_variables) +
+  scale_y_discrete(labels = nombres_variables) +
+  coord_equal() +
+  labs(
+    title = "Correlaciones entre regresores (2019)",
+    x = NULL,
+    y = NULL
+  ) +
+  theme_minimal() +
+  theme(
+    axis.text.x = element_text(angle = 45, hjust = 1),
+    panel.grid = element_blank()
+  )
+
+# Mostrar el gráfico
+grafico_correlaciones_2019
+
 ##### Homoscedasticidad #####################################################
 
 # Test de Breusch-Pagan para 2000
@@ -1333,3 +1387,21 @@ for (anio in c(2000, 2010, 2019)) {
   }
 }
 
+# Comparar el ajuste de las nueve regresiones
+
+comparacion_modelos <- tibble(
+  modelo = names(modelos_mco),
+  
+  r2_ajustado = sapply(
+    modelos_mco,
+    function(modelo) summary(modelo)$adj.r.squared
+  ),
+  
+  observaciones = sapply(
+    modelos_mco,
+    nobs
+  )
+)
+
+# Mostrar los resultados
+print(comparacion_modelos, n = Inf)
