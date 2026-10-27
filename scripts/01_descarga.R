@@ -91,4 +91,4 @@ wdi_raw <- WDI(
 # Guardar la base cruda ####
 
 # Para dejar una copia de la base cruda en la carpeta raw utilizamos: 
-# write_csv(wdi_raw, "raw/wdi_raw.csv") 
+#write_csv(wdi_raw, "raw/wdi_raw.csv")
