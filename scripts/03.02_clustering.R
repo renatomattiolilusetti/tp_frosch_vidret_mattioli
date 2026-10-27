@@ -2,6 +2,14 @@
 # Clustering demográficos
 # ==============================================================================
 
+# install.packages("gt")
+library(dplyr)
+library(webshot2)
+library(tidyverse)
+library(tidyr)
+library(ggplot2)
+library(cluster)
+library(gt)
 wdi_limpia <- read_csv("repo_wdi/wdi_limpia.csv")
 
 # Buscamos identificar qué perfiles demográficos existen en distintos momentos 
@@ -760,4 +768,634 @@ trayectorias_no_lineales <- trayectorias_paises |>
 
 trayectorias_no_lineales
 
+# Prueba de sensibilidad (sin outliers) ####
 
+# Si un país aparece como outlier al menos una vez en cualquiera de los cuatro años 
+# o variables, lo excluimos de 1980, 1995, 2010 y 2024 para esta prueba de sensibilidad
+
+# Identificamos todos los países que aparecen como outlier
+# en al menos una variable y en al menos uno de los cuatro años
+
+
+paises_outliers_total <- outliers_cluster_demografico |>
+  distinct(pais)
+
+paises_outliers_total
+
+# Cantidad de países distintos que presentan al menos un outlier
+
+nrow(paises_outliers_total)
+
+# Cuántos países perdemos y cuántos quedan para la prueba de sensibilidad
+
+resumen_exclusion_outliers <- tibble(
+  paises_originales = 194,
+  paises_excluidos = nrow(paises_outliers_total),
+  paises_restantes = 194 - nrow(paises_outliers_total),
+  porcentaje_excluido = 100 * nrow(paises_outliers_total) / 194
+)
+
+resumen_exclusion_outliers
+
+# Excluimos esos mismos países de los cuatro períodos
+
+datos_1980_sin_outliers <- datos_1980 |>
+  anti_join(paises_outliers_total, by = "pais")
+
+datos_1995_sin_outliers <- datos_1995 |>
+  anti_join(paises_outliers_total, by = "pais")
+
+datos_2010_sin_outliers <- datos_2010 |>
+  anti_join(paises_outliers_total, by = "pais")
+
+datos_2024_sin_outliers <- datos_2024 |>
+  anti_join(paises_outliers_total, by = "pais")
+
+# Repetimos PCA
+# 1980
+
+X_1980_sin_outliers <- datos_1980_sin_outliers |>
+  select(all_of(vars_demograficas)) |>
+  as.data.frame()
+
+rownames(X_1980_sin_outliers) <- datos_1980_sin_outliers$pais
+
+pca_1980_sin_outliers <- PCA(
+  X_1980_sin_outliers,
+  scale.unit = TRUE,
+  ncp = 2,
+  graph = FALSE
+)
+
+
+# 1995
+
+X_1995_sin_outliers <- datos_1995_sin_outliers |>
+  select(all_of(vars_demograficas)) |>
+  as.data.frame()
+
+rownames(X_1995_sin_outliers) <- datos_1995_sin_outliers$pais
+
+pca_1995_sin_outliers <- PCA(
+  X_1995_sin_outliers,
+  scale.unit = TRUE,
+  ncp = 2,
+  graph = FALSE
+)
+
+
+# 2010
+
+X_2010_sin_outliers <- datos_2010_sin_outliers |>
+  select(all_of(vars_demograficas)) |>
+  as.data.frame()
+
+rownames(X_2010_sin_outliers) <- datos_2010_sin_outliers$pais
+
+pca_2010_sin_outliers <- PCA(
+  X_2010_sin_outliers,
+  scale.unit = TRUE,
+  ncp = 2,
+  graph = FALSE
+)
+
+
+# 2024
+
+X_2024_sin_outliers <- datos_2024_sin_outliers |>
+  select(all_of(vars_demograficas)) |>
+  as.data.frame()
+
+rownames(X_2024_sin_outliers) <- datos_2024_sin_outliers$pais
+
+pca_2024_sin_outliers <- PCA(
+  X_2024_sin_outliers,
+  scale.unit = TRUE,
+  ncp = 2,
+  graph = FALSE
+)
+
+# Comparamos cuanto explican los componentes CON y SIN outliers
+
+sensibilidad_pca_outliers <- tibble(
+  anio = c(1980, 1995, 2010, 2024),
+  
+  pc1_original = c(
+    pca_1980$eig[1, 2],
+    pca_1995$eig[1, 2],
+    pca_2010$eig[1, 2],
+    pca_2024$eig[1, 2]
+  ),
+  
+  pc1_sin_outliers = c(
+    pca_1980_sin_outliers$eig[1, 2],
+    pca_1995_sin_outliers$eig[1, 2],
+    pca_2010_sin_outliers$eig[1, 2],
+    pca_2024_sin_outliers$eig[1, 2]
+  ),
+  
+  pc1_pc2_original = c(
+    pca_1980$eig[2, 3],
+    pca_1995$eig[2, 3],
+    pca_2010$eig[2, 3],
+    pca_2024$eig[2, 3]
+  ),
+  
+  pc1_pc2_sin_outliers = c(
+    pca_1980_sin_outliers$eig[2, 3],
+    pca_1995_sin_outliers$eig[2, 3],
+    pca_2010_sin_outliers$eig[2, 3],
+    pca_2024_sin_outliers$eig[2, 3]
+  )
+)
+
+sensibilidad_pca_outliers
+
+# Repetimos clustering sin países con outliers
+
+hcpc_1980_sin_outliers <- HCPC(
+  pca_1980_sin_outliers,
+  nb.clust = 2,
+  consol = TRUE,
+  graph = FALSE
+)
+
+hcpc_1995_sin_outliers <- HCPC(
+  pca_1995_sin_outliers,
+  nb.clust = 2,
+  consol = TRUE,
+  graph = FALSE
+)
+
+hcpc_2010_sin_outliers <- HCPC(
+  pca_2010_sin_outliers,
+  nb.clust = 2,
+  consol = TRUE,
+  graph = FALSE
+)
+
+hcpc_2024_sin_outliers <- HCPC(
+  pca_2024_sin_outliers,
+  nb.clust = 2,
+  consol = TRUE,
+  graph = FALSE
+)
+
+# Comparación de silhouette
+
+sil_1980_sin_outliers <- silhouette(
+  as.integer(hcpc_1980_sin_outliers$data.clust$clust),
+  dist(pca_1980_sin_outliers$ind$coord[, 1:2])
+)
+
+sil_1995_sin_outliers <- silhouette(
+  as.integer(hcpc_1995_sin_outliers$data.clust$clust),
+  dist(pca_1995_sin_outliers$ind$coord[, 1:2])
+)
+
+sil_2010_sin_outliers <- silhouette(
+  as.integer(hcpc_2010_sin_outliers$data.clust$clust),
+  dist(pca_2010_sin_outliers$ind$coord[, 1:2])
+)
+
+sil_2024_sin_outliers <- silhouette(
+  as.integer(hcpc_2024_sin_outliers$data.clust$clust),
+  dist(pca_2024_sin_outliers$ind$coord[, 1:2])
+)
+
+sensibilidad_cluster_outliers <- tibble(
+  anio = c(1980, 1995, 2010, 2024),
+  
+  silhouette_original = c(
+    mean(sil_1980[, "sil_width"]),
+    mean(sil_1995[, "sil_width"]),
+    mean(sil_2010[, "sil_width"]),
+    mean(sil_2024[, "sil_width"])
+  ),
+  
+  silhouette_sin_outliers = c(
+    mean(sil_1980_sin_outliers[, "sil_width"]),
+    mean(sil_1995_sin_outliers[, "sil_width"]),
+    mean(sil_2010_sin_outliers[, "sil_width"]),
+    mean(sil_2024_sin_outliers[, "sil_width"])
+  )
+)
+
+sensibilidad_cluster_outliers
+
+# Silhouette no cambia demasiado al sacar los países que tuvieron algún outlier.
+# No hay evidencia de que los outliers estén afectando artificialmente los dos grupos.
+
+# Tabla resumen por año y variable 
+
+outliers_cluster_demografico |>
+  count(anio, variable)
+
+outliers_cluster_demografico |>
+  arrange(anio, variable, pais)
+
+# Gráficos para PPT ####
+
+# Silhouette media de la solución k = 2 por año
+
+silhouette_resumen <- tibble(
+  anio = factor(
+    c("1980", "1995", "2010", "2024"),
+    levels = c("1980", "1995", "2010", "2024")
+  ),
+  silhouette_media = c(
+    0.552,
+    0.488,
+    0.498,
+    0.507
+  )
+)
+
+grafico_silhouette <- ggplot(
+  silhouette_resumen,
+  aes(
+    x = anio,
+    y = silhouette_media
+  )
+) +
+  geom_col(
+    width = 0.6
+  ) +
+  geom_text(
+    aes(label = round(silhouette_media, 3)),
+    vjust = -0.5,
+    size = 3.5
+  ) +
+  labs(
+    title = "Calidad de la solución de dos clusters",
+    x = NULL,
+    y = "Silhouette media"
+  ) +
+  ylim(0, 0.62) +
+  theme_minimal(base_size = 10) +
+  theme(
+    panel.grid.major.x = element_blank(),
+    panel.grid.minor = element_blank(),
+    plot.title = element_text(
+      face = "bold",
+      size = 11
+    )
+  )
+
+grafico_silhouette
+
+ggsave(
+  "silhouette_clusters.png",
+  plot = grafico_silhouette,
+  width = 5,
+  height = 3,
+  units = "in",
+  dpi = 300,
+  bg = "white"
+)
+
+# Correlaciones entre las variables - ejemplo 2024
+
+cor_2024 <- datos_2024 |>
+  select(all_of(vars_demograficas)) |>
+  cor() |>
+  as.data.frame() |>
+  rownames_to_column("variable_1") |>
+  pivot_longer(
+    -variable_1,
+    names_to = "variable_2",
+    values_to = "correlacion"
+  ) |>
+  mutate(
+    variable_1 = recode(
+      variable_1,
+      poblacion_65_mas = "Población 65+",
+      fecundidad = "Fecundidad",
+      esperanza_vida = "Esperanza de vida",
+      crecimiento_poblacional = "Crecimiento"
+    ),
+    variable_2 = recode(
+      variable_2,
+      poblacion_65_mas = "Población 65+",
+      fecundidad = "Fecundidad",
+      esperanza_vida = "Esperanza de vida",
+      crecimiento_poblacional = "Crecimiento"
+    )
+  )
+
+grafico_correlaciones <- ggplot(
+  cor_2024,
+  aes(
+    x = variable_2,
+    y = variable_1,
+    fill = correlacion
+  )
+) +
+  geom_tile(
+    color = "white",
+    linewidth = 0.5
+  ) +
+  geom_text(
+    aes(label = round(correlacion, 2)),
+    size = 3.2
+  ) +
+  scale_fill_gradient2(
+    low = "firebrick",
+    mid = "white",
+    high = "steelblue",
+    midpoint = 0,
+    limits = c(-1, 1)
+  ) +
+  labs(
+    title = "Correlaciones entre variables",
+    subtitle = "Ejemplo: 2024",
+    x = NULL,
+    y = NULL,
+    fill = "r"
+  ) +
+  coord_fixed() +
+  theme_minimal(base_size = 9) +
+  theme(
+    panel.grid = element_blank(),
+    axis.text.x = element_text(
+      angle = 45,
+      hjust = 1,
+      size = 7
+    ),
+    axis.text.y = element_text(size = 7),
+    plot.title = element_text(
+      face = "bold",
+      size = 11
+    ),
+    plot.subtitle = element_text(size = 8),
+    legend.position = "none"
+  )
+
+grafico_correlaciones
+
+ggsave(
+  "correlaciones_2024.png",
+  plot = grafico_correlaciones,
+  width = 4.5,
+  height = 4,
+  units = "in",
+  dpi = 300,
+  bg = "white"
+)
+
+# Trayectorias resumen
+
+trayectorias_resumen <- trayectorias_paises |>
+  count(
+    cluster_1980,
+    cluster_1995,
+    cluster_2010,
+    cluster_2024,
+    sort = TRUE
+  ) |>
+  rename(
+    `1980` = cluster_1980,
+    `1995` = cluster_1995,
+    `2010` = cluster_2010,
+    `2024` = cluster_2024,
+    `Países` = n
+  )
+
+tabla_trayectorias <- trayectorias_resumen |>
+  gt() |>
+  tab_header(
+    title = "Trayectorias entre perfiles demográficos",
+    subtitle = "Pertenencia a clusters en los cuatro momentos"
+  ) |>
+  cols_align(
+    align = "center"
+  ) |>
+  tab_style(
+    style = cell_text(weight = "bold"),
+    locations = cells_column_labels()
+  ) |>
+  tab_options(
+    table.font.size = px(13),
+    heading.title.font.size = px(16),
+    heading.subtitle.font.size = px(11),
+    data_row.padding = px(4)
+  )
+
+tabla_trayectorias
+
+gtsave(
+  tabla_trayectorias,
+  "tabla_trayectorias.png",
+  zoom = 2
+)
+
+# Tabla perfiles comparados 
+
+tabla_perfiles <- perfiles_comparados |>
+rename(
+  `Año` = anio,
+  `Cluster` = clust,
+  `Países` = n,
+  `Población 65+ (%)` = poblacion_65_mas,
+  `Fecundidad` = fecundidad,
+  `Esperanza de vida` = esperanza_vida,
+  `Crecimiento (%)` = crecimiento_poblacional
+) |>
+  gt() |>
+  fmt_number(
+    columns = c(
+      `Población 65+ (%)`,
+      `Fecundidad`,
+      `Esperanza de vida`,
+      `Crecimiento (%)`
+    ),
+    decimals = 2
+  ) |>
+  tab_header(
+    title = "Evolución de los perfiles demográficos",
+    subtitle = "Características promedio de los clusters"
+  ) |>
+  cols_align(
+    align = "center"
+  ) |>
+  tab_style(
+    style = cell_text(weight = "bold"),
+    locations = cells_column_labels()
+  ) |>
+  tab_options(
+    table.font.size = px(12),
+    heading.title.font.size = px(16),
+    heading.subtitle.font.size = px(11),
+    data_row.padding = px(4)
+  )
+
+tabla_perfiles
+
+gtsave(
+  tabla_perfiles,
+  "tabla_perfiles_demograficos.png",
+  zoom = 2
+)
+
+# Cambio de pesos 
+
+evolucion_clusters <- perfiles_comparados |>
+  select(anio, clust, n) |>
+  mutate(
+    perfil = if_else(
+      clust == 1,
+      "Perfil joven y expansivo",
+      "Transición avanzada"
+    )
+  )
+
+grafico_evolucion_clusters <- ggplot(
+  evolucion_clusters,
+  aes(
+    x = factor(anio),
+    y = n,
+    fill = perfil
+  )
+) +
+  geom_col(
+    position = "stack",
+    width = 0.65
+  ) +
+  geom_text(
+    aes(label = n),
+    position = position_stack(vjust = 0.5),
+    size = 3.5
+  ) +
+  labs(
+    title = "Cambio en los perfiles demográficos",
+    subtitle = "Cantidad de países por cluster",
+    x = NULL,
+    y = "Países",
+    fill = NULL
+  ) +
+  theme_minimal(base_size = 10) +
+  theme(
+    panel.grid.major.x = element_blank(),
+    panel.grid.minor = element_blank(),
+    plot.title = element_text(
+      face = "bold",
+      size = 11
+    ),
+    legend.position = "bottom"
+  )
+
+grafico_evolucion_clusters
+
+ggsave(
+  "evolucion_clusters.png",
+  plot = grafico_evolucion_clusters,
+  width = 5,
+  height = 3.3,
+  units = "in",
+  dpi = 300,
+  bg = "white"
+)
+
+# Silhouettes por cluster
+
+silhouette_clusters <- bind_rows(
+  
+  as.data.frame(sil_1980) |>
+    as_tibble() |>
+    group_by(cluster) |>
+    summarise(
+      n = n(),
+      media = mean(sil_width),
+      mediana = median(sil_width),
+      negativos = sum(sil_width < 0),
+      .groups = "drop"
+    ) |>
+    mutate(anio = 1980),
+  
+  as.data.frame(sil_1995) |>
+    as_tibble() |>
+    group_by(cluster) |>
+    summarise(
+      n = n(),
+      media = mean(sil_width),
+      mediana = median(sil_width),
+      negativos = sum(sil_width < 0),
+      .groups = "drop"
+    ) |>
+    mutate(anio = 1995),
+  
+  as.data.frame(sil_2010) |>
+    as_tibble() |>
+    group_by(cluster) |>
+    summarise(
+      n = n(),
+      media = mean(sil_width),
+      mediana = median(sil_width),
+      negativos = sum(sil_width < 0),
+      .groups = "drop"
+    ) |>
+    mutate(anio = 2010),
+  
+  as.data.frame(sil_2024) |>
+    as_tibble() |>
+    group_by(cluster) |>
+    summarise(
+      n = n(),
+      media = mean(sil_width),
+      mediana = median(sil_width),
+      negativos = sum(sil_width < 0),
+      .groups = "drop"
+    ) |>
+    mutate(anio = 2024)
+  
+) |>
+  select(anio, cluster, n, media, mediana, negativos) |>
+  arrange(anio, cluster)
+
+silhouette_clusters
+
+tabla_silhouette_clusters <- silhouette_clusters |>
+  rename(
+    `Año` = anio,
+    `Cluster` = cluster,
+    `Países` = n,
+    `Silhouette media` = media,
+    `Silhouette mediana` = mediana,
+    `Negativas` = negativos
+  ) |>
+  gt() |>
+  fmt_number(
+    columns = c(
+      `Silhouette media`,
+      `Silhouette mediana`
+    ),
+    decimals = 3
+  ) |>
+  tab_header(
+    title = "Calidad de los clusters por período",
+    subtitle = "Silhouette media y mediana por cluster"
+  ) |>
+  cols_align(
+    align = "center"
+  ) |>
+  tab_style(
+    style = cell_text(weight = "bold"),
+    locations = cells_column_labels()
+  ) |>
+  tab_source_note(
+    source_note = "Una silhouette negativa indica que un país está más próximo al otro cluster que al cluster al que fue asignado."
+  ) |>
+  tab_options(
+    table.font.size = px(12),
+    heading.title.font.size = px(16),
+    heading.subtitle.font.size = px(11),
+    data_row.padding = px(4)
+  )
+
+tabla_silhouette_clusters
+
+gtsave(
+  tabla_silhouette_clusters,
+  "silhouette_por_cluster.png",
+  zoom = 2
+)

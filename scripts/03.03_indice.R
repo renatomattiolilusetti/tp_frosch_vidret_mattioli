@@ -651,3 +651,99 @@ pairwise.wilcox.test(
 # Esto aporta evidencia a nuestra hipótesis:
 # países con niveles similares de envejecimiento no necesariamente cuentan
 # con las mismas capacidades de respuesta.
+
+# Gráficos para PPT ####
+
+# Perfiles de capacidad de respuesta
+
+mapa_pca_clusters <- res$ind$coord[, 1:2] |>
+  as.data.frame() |>
+  rownames_to_column("pais") |>
+  rename(
+    PC1 = Dim.1,
+    PC2 = Dim.2
+  ) |>
+  left_join(
+    capacidad_2023 |>
+      select(pais, cluster_capacidad),
+    by = "pais"
+  )
+
+grafico_pca_clusters <- ggplot(
+  mapa_pca_clusters,
+  aes(
+    x = PC1,
+    y = PC2,
+    color = factor(cluster_capacidad)
+  )
+) +
+  geom_hline(
+    yintercept = 0,
+    linetype = "dashed",
+    alpha = 0.4
+  ) +
+  geom_vline(
+    xintercept = 0,
+    linetype = "dashed",
+    alpha = 0.4
+  ) +
+  geom_point(
+    size = 2.2,
+    alpha = 0.8
+  ) +
+  labs(
+    title = "Perfiles de capacidad de respuesta",
+    subtitle = "Países según los dos primeros componentes principales",
+    x = "PC1 · Capacidad general",
+    y = "PC2 · Dimensión asociada al gasto de bolsillo",
+    color = "Perfil"
+  ) +
+  theme_minimal(base_size = 10) +
+  theme(
+    plot.title = element_text(face = "bold"),
+    legend.position = "bottom"
+  )
+
+grafico_pca_clusters
+
+ggsave("pca_clusters.png",
+       grafico_pca_clusters,
+       width = 5, height = 3.5,
+       dpi = 300, bg = "white")
+
+# Diferencias entre países 
+
+grafico_envejecimiento_12 <- capacidad_2023 |>
+  filter(cluster_capacidad %in% c(1, 2)) |>
+  ggplot(
+    aes(
+      x = factor(cluster_capacidad),
+      y = poblacion_65_mas
+    )
+  ) +
+  geom_boxplot(
+    width = 0.55,
+    outlier.shape = NA
+  ) +
+  geom_jitter(
+    width = 0.12,
+    alpha = 0.35,
+    size = 1.5
+  ) +
+  labs(
+    title = "Envejecimiento similar, distintos perfiles",
+    subtitle = "Medianas: 3,21% vs. 3,73% · p ajustado = 0,21",
+    x = "Perfil de capacidad",
+    y = "Población de 65 años o más (%)"
+  ) +
+  theme_minimal(base_size = 10) +
+  theme(
+    plot.title = element_text(face = "bold")
+  )
+
+grafico_envejecimiento_12
+
+ggsave("envejecimiento_similar.png",
+       grafico_envejecimiento_12,
+       width = 5, height = 3.2,
+       dpi = 300, bg = "white")

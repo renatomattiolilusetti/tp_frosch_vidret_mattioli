@@ -575,3 +575,4 @@ diccionario <- tribble(
   "Ordinal", "-", "4 categorías"
 )
 
+
