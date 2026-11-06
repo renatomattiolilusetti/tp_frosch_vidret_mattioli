@@ -847,3 +847,138 @@ grafico_na_region <- ggplot(
 # grafico_na_region
 
 #
+
+# ============================================================
+# Diagnóstico de NA: todas las variables relevantes
+# ============================================================
+
+# Seleccionamos las 12 variables de la segunda entrega
+
+variables_relevantes <- c(
+  "poblacion_total",
+  "poblacion_65_mas",
+  "pib_per_capita_ppa",
+  "migracion_neta",
+  "indice_cobertura_salud",
+  "gasto_salud_pib",
+  "gasto_publico_salud_pib",
+  "gasto_bolsillo_salud",
+  "fecundidad",
+  "esperanza_vida",
+  "dependencia_mayor",
+  "crecimiento_poblacional"
+)
+
+# Calculamos los faltantes para cada variable y año
+
+tabla_na_anual <- wdi_limpia |>
+  group_by(anio) |>
+  summarise(
+    across(
+      all_of(variables_relevantes),
+      ~ sum(is.na(.))
+    ),
+    .groups = "drop"
+  ) |>
+  pivot_longer(
+    cols = all_of(variables_relevantes),
+    names_to = "variable",
+    values_to = "cantidad_na"
+  )
+
+# Mostramos la tabla
+View(tabla_na_anual)
+
+# Resumen para los años de los análisis principales
+
+tabla_na_anios_elegidos <- tabla_na_anual |>
+  filter(anio %in% c(1980, 1995, 2000, 2010, 2019, 2023, 2024)) |>
+  pivot_wider(
+    names_from = anio,
+    values_from = cantidad_na
+  )
+
+View(tabla_na_anios_elegidos)
+
+# ============================================================
+# Test de Little: variables estandarizadas
+# ============================================================
+
+# Estandarizamos las 12 variables
+datos_mcar_2019_std <- datos_mcar_2019 |>
+  mutate(
+    across(
+      everything(),
+      ~ as.numeric(scale(.))
+    )
+  )
+
+# Verificamos que los NA no hayan cambiado
+colSums(is.na(datos_mcar_2019_std))
+
+# Reintentamos el test de Little
+resultado_mcar_2019_std <- naniar::mcar_test(
+  datos_mcar_2019_std
+)
+
+resultado_mcar_2019_std
+
+# ============================================================
+# Test de Little para 2000, 2010 y 2023
+# ============================================================
+
+for (anio_elegido in c(2000, 2010, 2023)) {
+  
+  # Seleccionamos el año
+  datos_mcar <- wdi_limpia |>
+    filter(anio == anio_elegido) |>
+    select(all_of(variables_relevantes))
+  
+  # Estandarizamos
+  datos_mcar_std <- datos_mcar |>
+    mutate(
+      across(
+        everything(),
+        ~ as.numeric(scale(.))
+      )
+    )
+  
+  # Ejecutamos el test
+  resultado <- naniar::mcar_test(datos_mcar_std)
+  
+  # Mostramos los resultados
+  cat("\nAño:", anio_elegido, "\n")
+  print(resultado)
+}
+
+# ============================================================
+# Tabla resumen de NA por variable (1960-2025)
+# ============================================================
+
+tabla_na_total <- wdi_limpia |>
+  filter(anio >= 1960, anio <= 2025) |>
+  summarise(
+    across(
+      all_of(variables_relevantes),
+      ~ sum(is.na(.))
+    )
+  ) |>
+  pivot_longer(
+    cols = everything(),
+    names_to = "variable",
+    values_to = "cantidad_na"
+  ) |>
+  mutate(
+    total_observaciones = sum(
+      wdi_limpia$anio >= 1960 &
+        wdi_limpia$anio <= 2025,
+      na.rm = TRUE
+    ),
+    porcentaje_na = round(
+      cantidad_na / total_observaciones * 100, 2
+    )
+  ) |>
+  arrange(desc(porcentaje_na))
+
+# Ver la tabla completa
+View(tabla_na_total)
