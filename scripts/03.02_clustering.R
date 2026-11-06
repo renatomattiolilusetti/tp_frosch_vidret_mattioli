@@ -1068,14 +1068,14 @@ cor_2024 <- datos_2024 |>
     values_to = "correlacion"
   ) |>
   mutate(
-    variable_1 = recode(
+    variable_1 = dplyr::recode(
       variable_1,
       poblacion_65_mas = "Población 65+",
       fecundidad = "Fecundidad",
       esperanza_vida = "Esperanza de vida",
       crecimiento_poblacional = "Crecimiento"
     ),
-    variable_2 = recode(
+    vvariable_1 = dplyr::recode(
       variable_2,
       poblacion_65_mas = "Población 65+",
       fecundidad = "Fecundidad",

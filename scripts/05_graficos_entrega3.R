@@ -322,11 +322,22 @@ grafico_exploratorio <- ggplot(puntos, aes(PC1, PC2)) +
     plot.title    = element_textbox_simple(family = fuente_titulo, size = rel(1.55), color = gris_titulo,
                                            lineheight = 1.1, width = unit(1, "npc"),
                                            margin = margin(b = 6)),
-    plot.subtitle = element_textbox_simple(color = gris_texto, size = rel(0.9), lineheight = 1.2,
-                                           width = unit(1, "npc"), margin = margin(b = 10)),
-    plot.caption  = element_textbox_simple(color = gris_suave, size = rel(0.8), lineheight = 1.1,
-                                           width = unit(1, "npc"), halign = 0,
-                                           margin = margin(t = 10)),
+    plot.subtitle = element_textbox_simple(
+      color = gris_texto,
+      size = rel(0.9),
+      lineheight = 1.2,
+      width = unit(1, "npc"),
+      margin = margin(b = 10)
+    ),
+    
+    plot.caption = element_textbox_simple(
+      color = gris_suave,
+      size = rel(0.8),
+      lineheight = 1.1,
+      width = unit(1, "npc"),
+      halign = 0,
+      margin = margin(t = 10)
+    ),
     strip.text    = element_text(face = "bold", hjust = 0, color = gris_titulo,
                                  size = rel(0.95), margin = margin(t = 2, b = 3)),
     panel.grid.minor   = element_blank(),
@@ -352,3 +363,105 @@ ggsave("grupo_10_exploratorio.jpg", grafico_exploratorio,
 # Revisar en el JPG al 100%:
 # - si los paneles quedan muy bajos, subir height (26-28) o bajar el texto;
 # - si las etiquetas de países molestan, sacarlas (son opcionales).
+
+##### MAPA
+
+# 1. Recuperar los códigos de país
+codigos_mapa <- puntos |>
+  filter(anio == 2024) |>
+  distinct(pais, codigo_pais)
+
+# Comprobar que cada país tenga un solo código
+codigos_mapa |>
+  count(pais) |>
+  filter(n > 1)
+
+# 2. Clasificar las transiciones entre 1980 y 2024
+transiciones_mapa <- trayectorias_paises |>
+  select(pais, cluster_1980, cluster_2024) |>
+  left_join(codigos_mapa, by = "pais") |>
+  mutate(
+    transicion = case_when(
+      cluster_1980 == 1 & cluster_2024 == 1 ~ "Joven → Joven",
+      cluster_1980 == 1 & cluster_2024 == 2 ~ "Joven → Avanzado",
+      cluster_1980 == 2 & cluster_2024 == 2 ~ "Avanzado → Avanzado",
+      cluster_1980 == 2 & cluster_2024 == 1 ~ "Avanzado → Joven"
+    )
+  )
+
+# 3. Comprobar los resultados
+transiciones_mapa |>
+  count(transicion)
+
+# 4. Buscar países sin código
+transiciones_mapa |>
+  filter(is.na(codigo_pais)) |>
+  select(pais)
+
+install.packages(c("sf", "rnaturalearth", "rnaturalearthdata"))
+library(sf)
+library(rnaturalearth)
+
+# Obtener un mapa mundial más detallado
+mapa_mundo <- ne_countries(
+  scale = "medium",
+  returnclass = "sf"
+)
+
+# Corregir códigos no estándar cuando exista uno alternativo
+mapa_mundo <- mapa_mundo |>
+  mutate(
+    codigo_mapa = if_else(
+      is.na(iso_a3) | iso_a3 == "-99",
+      iso_a3_eh,
+      iso_a3
+    )
+  )
+
+# Inspeccionar la cartografía
+dim(mapa_mundo)
+names(mapa_mundo)
+
+# Buscar países de nuestro análisis que no coincidan
+# con los códigos del mapa
+
+# Identificar países que todavía no coinciden
+paises_sin_mapa <- transiciones_mapa |>
+  anti_join(
+    mapa_mundo |> st_drop_geometry(),
+    by = c("codigo_pais" = "codigo_mapa")
+  )
+
+# Cantidad de países pendientes
+nrow(paises_sin_mapa)
+
+# Listado de países pendientes
+paises_sin_mapa |>
+  select(pais, codigo_pais)
+
+mapa_mundo |>
+  st_drop_geometry() |>
+  count(codigo_mapa) |>
+  filter(n > 1, !is.na(codigo_mapa))
+
+# Inspeccionar los códigos que requieren revisión
+
+revision_mapa <- mapa_mundo |>
+  st_drop_geometry() |>
+  filter(
+    codigo_mapa %in% c("AUS", "-99") |
+      str_detect(name, regex("Kosov", ignore_case = TRUE)) |
+      str_detect(admin, regex("Kosov", ignore_case = TRUE))
+  ) |>
+  select(
+    name,
+    admin,
+    type,
+    iso_a3,
+    iso_a3_eh,
+    wb_a3,
+    adm0_a3,
+    codigo_mapa
+  )
+
+print(revision_mapa)
