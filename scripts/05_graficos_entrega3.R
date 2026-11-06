@@ -364,104 +364,817 @@ ggsave("grupo_10_exploratorio.jpg", grafico_exploratorio,
 # - si los paneles quedan muy bajos, subir height (26-28) o bajar el texto;
 # - si las etiquetas de países molestan, sacarlas (son opcionales).
 
-##### MAPA
+library(tidyverse)
 
-# 1. Recuperar los códigos de país
-codigos_mapa <- puntos |>
-  filter(anio == 2024) |>
-  distinct(pais, codigo_pais)
+library(tidyverse)
 
-# Comprobar que cada país tenga un solo código
-codigos_mapa |>
-  count(pais) |>
-  filter(n > 1)
+# ============================================================
+# 1. PREPARAR LOS DATOS
+# ============================================================
 
-# 2. Clasificar las transiciones entre 1980 y 2024
-transiciones_mapa <- trayectorias_paises |>
-  select(pais, cluster_1980, cluster_2024) |>
-  left_join(codigos_mapa, by = "pais") |>
+# Recuperar la posición y el perfil de cada país en 1980 y 2024
+
+cambios_pca <- puntos |>
+  filter(anio %in% c(1980, 2024)) |>
+  select(codigo_pais, pais, anio, PC1, perfil) |>
+  pivot_wider(
+    names_from = anio,
+    values_from = c(PC1, perfil),
+    names_sep = "_"
+  ) |>
   mutate(
+    # Cambio en la posición del PCA
+    cambio_pc1 = PC1_2024 - PC1_1980,
+    
+    # Clasificación de las transiciones
     transicion = case_when(
-      cluster_1980 == 1 & cluster_2024 == 1 ~ "Joven → Joven",
-      cluster_1980 == 1 & cluster_2024 == 2 ~ "Joven → Avanzado",
-      cluster_1980 == 2 & cluster_2024 == 2 ~ "Avanzado → Avanzado",
-      cluster_1980 == 2 & cluster_2024 == 1 ~ "Avanzado → Joven"
+      perfil_1980 == "joven" &
+        perfil_2024 == "joven" ~ "Joven → Joven",
+      
+      perfil_1980 == "joven" &
+        perfil_2024 == "avanzado" ~ "Joven → Avanzado",
+      
+      perfil_1980 == "avanzado" &
+        perfil_2024 == "avanzado" ~ "Avanzado → Avanzado",
+      
+      perfil_1980 == "avanzado" &
+        perfil_2024 == "joven" ~ "Avanzado → Joven"
     )
   )
 
-# 3. Comprobar los resultados
-transiciones_mapa |>
-  count(transicion)
 
-# 4. Buscar países sin código
-transiciones_mapa |>
-  filter(is.na(codigo_pais)) |>
-  select(pais)
+# Preparar las categorías del gráfico
 
-install.packages(c("sf", "rnaturalearth", "rnaturalearthdata"))
-library(sf)
-library(rnaturalearth)
+datos_grafico <- cambios_pca |>
+  mutate(
+    grupo = factor(
+      transicion,
+      levels = c(
+        "Avanzado → Joven",
+        "Avanzado → Avanzado",
+        "Joven → Avanzado",
+        "Joven → Joven"
+      ),
+      labels = c(
+        "Avanzado → Joven (1)",
+        "Avanzado → Avanzado (76)",
+        "Joven → Avanzado (34)",
+        "Joven → Joven (83)"
+      )
+    ),
+    
+    destacado = case_when(
+      cambio_pc1 < 0 ~ "Disminución del PC1",
+      transicion == "Joven → Avanzado" ~ "Joven a avanzado",
+      TRUE ~ "Otros países"
+    )
+  )
 
-# Obtener un mapa mundial más detallado
-mapa_mundo <- ne_countries(
-  scale = "medium",
-  returnclass = "sf"
+# 2. Definir los colores
+
+colores <- c(
+  "Otros países" = "#AEB9C5",
+  "Joven a avanzado" = "#D96B3B",
+  "Disminución del PC1" = "#305D83"
 )
 
-# Corregir códigos no estándar cuando exista uno alternativo
-mapa_mundo <- mapa_mundo |>
+
+# 3. Construir el gráfico
+
+grafico_cambio_pca <- ggplot(
+  datos_grafico,
+  aes(x = cambio_pc1, y = grupo)
+) +
+  
+  # Línea de referencia: ausencia de cambio
+  geom_vline(
+    xintercept = 0,
+    color = "#444444",
+    linetype = "dashed",
+    linewidth = 0.6
+  ) +
+  
+  # Un punto por país
+  geom_jitter(
+    aes(color = destacado),
+    width = 0,
+    height = 0.17,
+    size = 2.4,
+    alpha = 0.75
+  ) +
+  
+  # Etiquetar los dos países con cambio negativo
+  ggrepel::geom_text_repel(
+    data = filter(datos_grafico, cambio_pc1 < 0),
+    aes(label = pais),
+    size = 3.4,
+    color = "#305D83",
+    fontface = "bold",
+    max.overlaps = Inf,
+    seed = 10,
+    show.legend = FALSE
+  ) +
+  
+  scale_color_manual(
+    values = colores,
+    name = NULL
+  ) +
+  
+  scale_x_continuous(
+    labels = scales::label_number(
+      decimal.mark = ",",
+      accuracy = 0.1
+    )
+  ) +
+  
+  labs(
+    title = paste(
+      "192 de 194 países se desplazaron hacia",
+      "perfiles demográficos más envejecidos"
+    ),
+    
+    subtitle = paste(
+      "Cambio en el primer componente del PCA entre 1980 y 2024.",
+      "Cada punto es un país, agrupado según su clasificación",
+      "demográfica en ambos años."
+    ),
+    
+    x = "Cambio en el componente 1 del PCA (2024 − 1980)",
+    y = NULL,
+    
+    caption = paste(
+      "Fuente: elaboración propia con World Development Indicators, Banco Mundial.",
+      "Valores positivos del PC1 indican un desplazamiento hacia características",
+      "asociadas con mayor envejecimiento. Los clusters son relativos a cada año."
+    )
+  ) +
+  
+  theme_minimal(base_size = 12) +
+  
+  theme(
+    plot.title = element_text(
+      face = "bold",
+      size = 16,
+      color = "#363636",
+      margin = margin(b = 8)
+    ),
+    
+    plot.subtitle = element_text(
+      size = 11,
+      color = "#5B5B5B",
+      margin = margin(b = 15)
+    ),
+    
+    axis.text.y = element_text(
+      size = 11,
+      face = "bold",
+      color = "#363636"
+    ),
+    
+    axis.title.x = element_text(
+      size = 11,
+      color = "#5B5B5B",
+      margin = margin(t = 10)
+    ),
+    
+    panel.grid.minor = element_blank(),
+    panel.grid.major.y = element_blank(),
+    
+    panel.grid.major.x = element_line(
+      color = "#EAEAEA",
+      linewidth = 0.3
+    ),
+    
+    legend.position = "bottom",
+    legend.text = element_text(size = 10),
+    
+    plot.caption = element_text(
+      size = 9,
+      color = "#858585",
+      hjust = 0,
+      margin = margin(t = 15)
+    ),
+    
+    plot.title.position = "plot",
+    plot.caption.position = "plot",
+    
+    plot.background = element_rect(
+      fill = "white",
+      color = NA
+    ),
+    
+    plot.margin = margin(15, 20, 15, 15)
+  )
+
+
+# 4. Mostrar el gráfico
+
+grafico_cambio_pca
+
+install.packages("ggalluvial")
+
+library(tidyverse)
+library(ggalluvial)
+
+# Seguimos a los países jóvenes de 1980
+
+evolucion_jovenes <- trayectorias_paises |>
+  filter(cluster_1980 == 1) |>
+  select(pais, starts_with("cluster_")) |>
+  pivot_longer(
+    cols = starts_with("cluster_"),
+    names_to = "anio",
+    values_to = "cluster",
+    names_prefix = "cluster_",
+    names_transform = list(anio = as.integer)
+  ) |>
+  group_by(anio) |>
+  summarise(
+    jovenes = sum(cluster == 1, na.rm = TRUE),
+    avanzados = sum(cluster == 2, na.rm = TRUE),
+    faltantes = sum(is.na(cluster)),
+    .groups = "drop"
+  ) |>
   mutate(
-    codigo_mapa = if_else(
-      is.na(iso_a3) | iso_a3 == "-99",
-      iso_a3_eh,
-      iso_a3
+    porcentaje_avanzados = round(
+      avanzados / (jovenes + avanzados) * 100, 1
     )
   )
 
-# Inspeccionar la cartografía
-dim(mapa_mundo)
-names(mapa_mundo)
+library(tidyverse)
 
-# Buscar países de nuestro análisis que no coincidan
-# con los códigos del mapa
+# 1. Verificamos que la clave de unión sea única en ambas tablas
 
-# Identificar países que todavía no coinciden
-paises_sin_mapa <- transiciones_mapa |>
-  anti_join(
-    mapa_mundo |> st_drop_geometry(),
-    by = c("codigo_pais" = "codigo_mapa")
-  )
+puntos |>
+  count(codigo_pais, anio) |>
+  filter(n > 1)
 
-# Cantidad de países pendientes
-nrow(paises_sin_mapa)
+wdi_limpia |>
+  filter(anio %in% c(1980, 1995, 2010, 2024)) |>
+  count(codigo_pais, anio) |>
+  filter(n > 1) 
 
-# Listado de países pendientes
-paises_sin_mapa |>
-  select(pais, codigo_pais)
-
-mapa_mundo |>
-  st_drop_geometry() |>
-  count(codigo_mapa) |>
-  filter(n > 1, !is.na(codigo_mapa))
-
-# Inspeccionar los códigos que requieren revisión
-
-revision_mapa <- mapa_mundo |>
-  st_drop_geometry() |>
-  filter(
-    codigo_mapa %in% c("AUS", "-99") |
-      str_detect(name, regex("Kosov", ignore_case = TRUE)) |
-      str_detect(admin, regex("Kosov", ignore_case = TRUE))
+mediana_65_perfil <- puntos |>
+  select(codigo_pais, anio, perfil) |>
+  left_join(
+    wdi_limpia |>
+      select(codigo_pais, anio, poblacion_65_mas),
+    by = c("codigo_pais", "anio")
   ) |>
-  select(
-    name,
-    admin,
-    type,
-    iso_a3,
-    iso_a3_eh,
-    wb_a3,
-    adm0_a3,
-    codigo_mapa
+  filter(anio %in% c(1980, 1995, 2010, 2024)) |>
+  group_by(anio, perfil) |>
+  summarise(
+    mediana_65 = median(poblacion_65_mas, na.rm = TRUE),
+    cantidad_paises = n(),
+    .groups = "drop"
+  ) |>
+  mutate(
+    perfil = factor(
+      perfil,
+      levels = c("joven", "avanzado"),
+      labels = c("Perfil joven", "Perfil avanzado")
+    )
+  ) |>
+  arrange(perfil, anio)
+
+mediana_65_perfil
+
+
+library(ggrepel)
+
+colores_anio <- c(
+  "1980" = "#9DB4D3",
+  "1995" = "#C7D3E2",
+  "2010" = "#E8A06F",
+  "2024" = "#D96B3B"
+)
+
+grafico_65_perfil <- ggplot(
+  mediana_65_perfil,
+  aes(
+    x = mediana_65,
+    y = perfil,
+    group = perfil
+  )
+) +
+  
+  # línea que conecta los cuatro períodos dentro de cada perfil
+  geom_line(
+    color = "#8A8A8A",
+    linewidth = 1
+  ) +
+  
+  # puntos de cada año
+  geom_point(
+    aes(fill = factor(anio)),
+    shape = 21,
+    size = 5,
+    color = "white",
+    stroke = 0.8
+  ) +
+  
+  # etiquetas con año y valor
+  ggrepel::geom_text_repel(
+    aes(
+      label = paste0(
+        anio, ": ",
+        round(mediana_65, 1), "%"
+      ),
+      color = factor(anio)
+    ),
+    size = 4,
+    direction = "both",
+    box.padding = 0.25,
+    point.padding = 0.2,
+    segment.color = "#B0B0B0",
+    max.overlaps = Inf,
+    show.legend = FALSE
+  ) +
+  
+  scale_fill_manual(
+    values = colores_anio,
+    name = "Año"
+  ) +
+  
+  scale_color_manual(
+    values = colores_anio,
+    guide = "none"
+  ) +
+  
+  scale_x_continuous(
+    labels = function(x) paste0(x, "%"),
+    expand = expansion(mult = c(0.05, 0.15))
+  ) +
+  
+  labs(
+    title = "La proporción de población de 65+ aumentó en ambos perfiles demográficos",
+    subtitle = paste(
+      "Mediana de población de 65+ dentro de los perfiles joven y avanzado",
+      "en 1980, 1995, 2010 y 2024."
+    ),
+    x = "Mediana de población de 65+",
+    y = NULL,
+    caption = paste(
+      "Fuente: elaboración propia con WDI, Banco Mundial.",
+      "Los perfiles se obtuvieron mediante clustering sobre variables demográficas",
+      "y son relativos a cada año."
+    )
+  ) +
+  
+  theme_minimal(base_size = 12) +
+  
+  theme(
+    plot.title = element_text(
+      face = "bold",
+      size = 16,
+      color = "#363636",
+      margin = margin(b = 8)
+    ),
+    plot.subtitle = element_text(
+      size = 11,
+      color = "#5B5B5B",
+      margin = margin(b = 18)
+    ),
+    axis.text.y = element_text(
+      size = 12,
+      face = "bold",
+      color = "#363636"
+    ),
+    axis.title.x = element_text(
+      size = 11,
+      color = "#5B5B5B",
+      margin = margin(t = 10)
+    ),
+    panel.grid.minor = element_blank(),
+    panel.grid.major.y = element_blank(),
+    legend.position = "bottom",
+    legend.title = element_text(size = 10),
+    legend.text = element_text(size = 10),
+    plot.caption = element_text(
+      size = 9,
+      color = "#858585",
+      hjust = 0,
+      margin = margin(t = 15)
+    ),
+    plot.title.position = "plot",
+    plot.caption.position = "plot"
   )
 
-print(revision_mapa)
+###
+
+library(tidyverse)
+
+# ============================================================
+# GRÁFICO COMUNICATIVO: BRECHA ENTRE PERFILES DEMOGRÁFICOS
+# ============================================================
+
+# 1. Preparar las medianas para las líneas
+
+medianas_brechas <- mediana_65_perfil |>
+  mutate(
+    tipo = if_else(
+      perfil == "Perfil joven",
+      "joven",
+      "avanzado"
+    )
+  ) |>
+  select(anio, tipo, mediana_65) |>
+  pivot_wider(
+    names_from = tipo,
+    values_from = mediana_65
+  ) |>
+  mutate(
+    anio_grafico = factor(
+      anio,
+      levels = c(2024, 2010, 1995, 1980)
+    ),
+    brecha = avanzado - joven
+  )
+
+# 2. Preparar los puntos y sus etiquetas
+
+puntos_brechas <- mediana_65_perfil |>
+  mutate(
+    anio_grafico = factor(
+      anio,
+      levels = c(2024, 2010, 1995, 1980)
+    ),
+    etiqueta = paste0(
+      formatC(
+        mediana_65,
+        format = "f",
+        digits = 1,
+        decimal.mark = ","
+      ),
+      "%"
+    )
+  )
+
+# 3. Colores de los perfiles
+
+colores_perfiles <- c(
+  "Perfil joven" = "#8FA6CC",
+  "Perfil avanzado" = "#A05961"
+)
+
+# 4. Construir el gráfico
+
+library(tidyverse)
+
+# ============================================================
+# RESUMEN DE POBLACIÓN 65+ POR PERFIL Y AÑO
+# ============================================================
+
+resumen_65_perfil <- puntos |>
+  select(codigo_pais, anio, perfil) |>
+  left_join(
+    wdi_limpia |>
+      select(codigo_pais, anio, poblacion_65_mas),
+    by = c("codigo_pais", "anio")
+  ) |>
+  filter(anio %in% c(1980, 1995, 2010, 2024)) |>
+  group_by(anio, perfil) |>
+  summarise(
+    mediana_65 = median(poblacion_65_mas, na.rm = TRUE),
+    q1_65 = quantile(poblacion_65_mas, 0.25, na.rm = TRUE),
+    q3_65 = quantile(poblacion_65_mas, 0.75, na.rm = TRUE),
+    cantidad_paises = n(),
+    .groups = "drop"
+  ) |>
+  mutate(
+    perfil = factor(
+      perfil,
+      levels = c("joven", "avanzado"),
+      labels = c("Perfil joven", "Perfil avanzado")
+    )
+  ) |>
+  arrange(anio, perfil)
+
+resumen_65_perfil
+
+# ============================================================
+# PREPARAR TABLAS PARA EL GRÁFICO
+# ============================================================
+
+# Tabla ancha para dibujar la brecha entre medianas
+brechas_iqr <- resumen_65_perfil |>
+  mutate(
+    tipo = if_else(
+      perfil == "Perfil joven",
+      "joven",
+      "avanzado"
+    )
+  ) |>
+  select(anio, tipo, mediana_65, q1_65, q3_65) |>
+  pivot_wider(
+    names_from = tipo,
+    values_from = c(mediana_65, q1_65, q3_65)
+  ) |>
+  mutate(
+    anio_grafico = factor(
+      anio,
+      levels = c(2024, 2010, 1995, 1980)
+    ),
+    brecha = mediana_65_avanzado - mediana_65_joven
+  )
+
+# Etiquetas de brecha para 1980 y 2024
+etiquetas_brecha <- brechas_iqr |>
+  filter(anio %in% c(1980, 2024)) |>
+  mutate(
+    punto_medio = (mediana_65_joven + mediana_65_avanzado) / 2,
+    etiqueta = paste0(
+      "+",
+      formatC(
+        brecha,
+        format = "f",
+        digits = 1,
+        decimal.mark = ","
+      ),
+      " pp"
+    )
+  )
+
+brechas_iqr
+
+# ============================================================
+# GRÁFICO COMUNICATIVO FINAL CON RANGO INTERCUARTÍLICO
+# ============================================================
+
+azul <- "#7399C5"
+bordo <- "#A2565F"
+gris <- "#929292"
+
+grafico_brechas_iqr <- ggplot() +
+  
+  # ----------------------------------------------------------
+# 1. Rango intercuartílico del perfil joven
+# ----------------------------------------------------------
+geom_segment(
+  data = brechas_iqr,
+  aes(
+    x = q1_65_joven,
+    xend = q3_65_joven,
+    y = anio_grafico,
+    yend = anio_grafico
+  ),
+  color = azul,
+  linewidth = 6,
+  alpha = 0.25,
+  lineend = "round"
+) +
+  
+  # ----------------------------------------------------------
+# 2. Rango intercuartílico del perfil avanzado
+# ----------------------------------------------------------
+geom_segment(
+  data = brechas_iqr,
+  aes(
+    x = q1_65_avanzado,
+    xend = q3_65_avanzado,
+    y = anio_grafico,
+    yend = anio_grafico
+  ),
+  color = bordo,
+  linewidth = 6,
+  alpha = 0.25,
+  lineend = "round"
+) +
+  
+  # ----------------------------------------------------------
+# 3. Línea que une las medianas de ambos perfiles
+# ----------------------------------------------------------
+geom_segment(
+  data = brechas_iqr,
+  aes(
+    x = mediana_65_joven,
+    xend = mediana_65_avanzado,
+    y = anio_grafico,
+    yend = anio_grafico
+  ),
+  color = gris,
+  linewidth = 1.05
+) +
+  
+  # ----------------------------------------------------------
+# 4. Puntos de las medianas
+# ----------------------------------------------------------
+geom_point(
+  data = brechas_iqr,
+  aes(x = mediana_65_joven, y = anio_grafico),
+  color = azul,
+  size = 4.8
+) +
+  
+  geom_point(
+    data = brechas_iqr,
+    aes(x = mediana_65_avanzado, y = anio_grafico),
+    color = bordo,
+    size = 4.8
+  ) +
+  
+  # ----------------------------------------------------------
+# 5. Etiquetas de las medianas
+# ----------------------------------------------------------
+geom_text(
+  data = brechas_iqr,
+  aes(
+    x = mediana_65_joven,
+    y = anio_grafico,
+    label = paste0(
+      formatC(
+        mediana_65_joven,
+        format = "f",
+        digits = 1,
+        decimal.mark = ","
+      ),
+      "%"
+    )
+  ),
+  nudge_x = -0.30,
+  hjust = 1,
+  color = azul,
+  fontface = "bold",
+  size = 4.6
+) +
+  
+  geom_text(
+    data = brechas_iqr,
+    aes(
+      x = mediana_65_avanzado,
+      y = anio_grafico,
+      label = paste0(
+        formatC(
+          mediana_65_avanzado,
+          format = "f",
+          digits = 1,
+          decimal.mark = ","
+        ),
+        "%"
+      )
+    ),
+    nudge_x = 0.30,
+    hjust = 0,
+    color = bordo,
+    fontface = "bold",
+    size = 4.6
+  ) +
+  
+  # ----------------------------------------------------------
+# 6. Etiquetas de brecha
+# ----------------------------------------------------------
+geom_text(
+  data = filter(etiquetas_brecha, anio == 1980),
+  aes(
+    x = punto_medio,
+    y = anio_grafico,
+    label = etiqueta
+  ),
+  nudge_y = 0.23,
+  color = "#777777",
+  fontface = "bold",
+  size = 4
+) +
+  
+  geom_text(
+    data = filter(etiquetas_brecha, anio == 2024),
+    aes(
+      x = punto_medio,
+      y = anio_grafico,
+      label = etiqueta
+    ),
+    nudge_y = 0.23,
+    color = bordo,
+    fontface = "bold",
+    size = 5
+  ) +
+  
+  # ----------------------------------------------------------
+# 7. Escalas
+# ----------------------------------------------------------
+scale_x_continuous(
+  breaks = c(0, 4, 8, 12, 16),
+  labels = function(x) paste0(x, "%"),
+  limits = c(0, 17.5),
+  expand = c(0, 0)
+) +
+  
+  scale_y_discrete(
+    expand = expansion(add = c(0.35, 0.35))
+  ) +
+  
+  # ----------------------------------------------------------
+# 8. Textos
+# ----------------------------------------------------------
+labs(
+  title = paste0(
+    "La brecha en población de 65+ entre perfiles ",
+    "pasó de 6,5 a 11 puntos porcentuales"
+  ),
+  
+  subtitle = paste0(
+    "En el perfil avanzado (bordó), la mediana pasó de 9,7% a 14,6%; ",
+    "en el joven (azul), se mantuvo cerca del 3%.\n",
+    "Las bandas muestran el rango intercuartílico ",
+    "(50% central de países) en cada perfil. ",
+    "194 países por año, 1980–2024."
+  ),
+  
+  x = "Población de 65 años o más (% del total)",
+  y = "Año",
+  
+  caption = paste0(
+    "Fuente: elaboración propia con World Development Indicators, Banco Mundial.\n",
+    "Nota: medianas y cuartiles entre países, sin ponderar. ",
+    "Perfiles estimados por separado en cada año, con composición variable. ",
+    "Brechas calculadas sin redondear."
+  )
+) +
+  
+  # ----------------------------------------------------------
+# 9. Tema
+# ----------------------------------------------------------
+theme_minimal(base_size = 13) +
+  
+  theme(
+    plot.title = element_text(
+      face = "bold",
+      size = 17,
+      color = "#303030",
+      lineheight = 1.1,
+      margin = margin(b = 9)
+    ),
+    
+    plot.subtitle = element_text(
+      size = 11.2,
+      color = "#666666",
+      lineheight = 1.2,
+      margin = margin(b = 16)
+    ),
+    
+    axis.text.y = element_text(
+      size = 13,
+      face = "bold",
+      color = "#363636",
+      margin = margin(r = 12)
+    ),
+    
+    axis.title.y = element_text(
+      size = 11,
+      color = "#666666",
+      margin = margin(r = 10)
+    ),
+    
+    axis.text.x = element_text(
+      size = 10.5,
+      color = "#777777",
+      margin = margin(t = 7)
+    ),
+    
+    axis.title.x = element_text(
+      size = 11,
+      color = "#666666",
+      margin = margin(t = 12)
+    ),
+    
+    panel.grid.major.y = element_blank(),
+    panel.grid.minor = element_blank(),
+    
+    panel.grid.major.x = element_line(
+      color = "#F0F0F0",
+      linewidth = 0.25
+    ),
+    
+    legend.position = "none",
+    
+    plot.caption = element_text(
+      size = 9,
+      color = "#858585",
+      hjust = 0,
+      lineheight = 1.2,
+      margin = margin(t = 16)
+    ),
+    
+    plot.title.position = "plot",
+    plot.caption.position = "plot",
+    
+    plot.background = element_rect(
+      fill = "white",
+      color = NA
+    ),
+    
+    plot.margin = margin(18, 20, 15, 18)
+  )
+
+grafico_brechas_iqr
+
+ggsave(
+  filename = "grupo_10_comunicativo_brechas_iqr.jpg",
+  plot = grafico_brechas_iqr,
+  width = 24,
+  height = 13,
+  units = "cm",
+  dpi = 300,
+  bg = "white",
+  quality = 95
+)
