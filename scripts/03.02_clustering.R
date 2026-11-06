@@ -10,6 +10,7 @@ library(tidyr)
 library(ggplot2)
 library(cluster)
 library(gt)
+library(FactoMineR)
 wdi_limpia <- read_csv("repo_wdi/wdi_limpia.csv")
 
 # Buscamos identificar qué perfiles demográficos existen en distintos momentos 
