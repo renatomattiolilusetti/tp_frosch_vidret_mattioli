@@ -139,7 +139,14 @@ tipicos <- puntos |>
   ungroup()
 tipicos   # MIRAR: qué país quedó en cada trayectoria
 if (nrow(tipicos) < 2) message("Algún grupo se quedó sin país: bajar `separacion_cm` (por ejemplo, a 0.4).")
-# Para forzar otro a mano: tipicos <- tibble(codigo_pais = c("NGA", "ESP", "BRA"))
+# Para el perfil avanzado se señala Argentina (siempre en el cluster 2) en lugar
+# del elegido automáticamente; el perfil joven sigue con el elegido por el criterio.
+# Se suma Perú como ejemplo de un país que cambia de perfil.
+tipicos <- bind_rows(
+  tipicos |> filter(patron == "1-1-1-1") |> select(codigo_pais),
+  tibble(codigo_pais = c("ARG", "PER"))   # Perú: pasó de joven a avanzado entre 1995 y 2010
+)
+tipicos
 
 etiquetas <- puntos |>
   filter(codigo_pais %in% tipicos$codigo_pais) |>
@@ -166,6 +173,50 @@ lim_x   <- rango_x + c(-1, 1) * 0.06 * diff(rango_x)
 lim_y   <- quantile(puntos$PC2, c(0.005, 0.995))
 n_fuera <- sum(puntos$PC2 < lim_y[1] | puntos$PC2 > lim_y[2])
 
+# Extremos de cada año: el país más joven (más a la izquierda en el componente 1)
+# y el más envejecido (más a la derecha), entre los que se ven en el gráfico.
+# Poner FALSE para sacarlos.
+mostrar_extremos <- TRUE
+nombres_extra <- c(
+  NER = "Níger", MLI = "Malí", TCD = "Chad", SOM = "Somalia", UGA = "Uganda", YEM = "Yemen",
+  AGO = "Angola", COD = "RD del Congo", BFA = "Burkina Faso", AFG = "Afganistán", RWA = "Ruanda",
+  MWI = "Malaui", BDI = "Burundi", GMB = "Gambia", MOZ = "Mozambique", SWE = "Suecia",
+  NOR = "Noruega", DNK = "Dinamarca", FIN = "Finlandia", AUT = "Austria", BEL = "Bélgica",
+  CHE = "Suiza", GRC = "Grecia", BGR = "Bulgaria", HRV = "Croacia", LVA = "Letonia",
+  EST = "Estonia", LTU = "Lituania", UKR = "Ucrania", HUN = "Hungría", MLT = "Malta",
+  PRI = "Puerto Rico", HKG = "Hong Kong", MCO = "Mónaco", SMR = "San Marino",
+  LIE = "Liechtenstein", AND = "Andorra", DEU = "Alemania", ITA = "Italia", PRT = "Portugal",
+  ZMB = "Zambia", TZA = "Tanzania", SLE = "Sierra Leona", GIN = "Guinea", LBR = "Liberia",
+  CAF = "República Centroafricana", SDN = "Sudán", SSD = "Sudán del Sur", CIV = "Costa de Marfil",
+  BEN = "Benín", TGO = "Togo", CMR = "Camerún", GNQ = "Guinea Ecuatorial", SYR = "Siria",
+  JOR = "Jordania", LBY = "Libia", OMN = "Omán", SAU = "Arabia Saudita", ARE = "Emiratos Árabes Unidos",
+  QAT = "Catar", KWT = "Kuwait", BHR = "Baréin", ZWE = "Zimbabue", SRB = "Serbia", SVN = "Eslovenia",
+  CZE = "República Checa", ROU = "Rumania", GBR = "Reino Unido", JPN = "Japón", KOR = "Corea del Sur"
+)
+extremos <- puntos |>
+  filter(PC2 >= lim_y[1], PC2 <= lim_y[2]) |>
+  group_by(anio) |>
+  filter(PC1 == min(PC1) | PC1 == max(PC1)) |>
+  ungroup() |>
+  mutate(tipo = if_else(PC1 < 0, "Más joven: ", "Más envejecido: "),
+         nombre = coalesce(unname(conocidos[codigo_pais]), unname(nombres_extra[codigo_pais]), pais),
+         texto = paste0(tipo, nombre))
+extremos |> select(anio, texto)
+# Control: avisa si algún extremo no tiene nombre en castellano cargado
+sin_traducir <- extremos |>
+  filter(!codigo_pais %in% c(names(conocidos), names(nombres_extra))) |>
+  distinct(codigo_pais, pais)
+if (nrow(sin_traducir) > 0) {
+  message("Agregar a `nombres_extra` el nombre en castellano de: ",
+          paste0(sin_traducir$codigo_pais, " (", sin_traducir$pais, ")", collapse = ", "))
+}
+if (!mostrar_extremos) extremos <- extremos[0, ]
+
+# Extremos cuyo nombre va abajo del punto (por defecto va arriba). Agregar
+# códigos si algún otro nombre se superpone con un círculo.
+extremos_abajo <- c("SOM")
+extremos <- extremos |> mutate(abajo = codigo_pais %in% extremos_abajo)
+
 
 # Etiquetas de países típicos: el nombre va del lado opuesto al triángulo
 # (si el país está por encima de la mediana, el nombre va arriba; si está por
@@ -182,7 +233,8 @@ etiquetas <- etiquetas |>
 # Tipografías: las de R por defecto (serif para el título, sans para el resto).
 # Sin showtext, que pegaba las palabras del título con colores, y sin instalar
 # nada extra.
-fuente_titulo <- "serif"
+# Misma tipografía (sans, Arial en Windows) para el título y para el resto del texto
+fuente_titulo <- "sans"
 fuente_texto  <- "sans"
 
 # Si showtext quedó activado de una corrida anterior (o del script de la clase),
@@ -216,6 +268,17 @@ grafico_exploratorio <- ggplot(puntos, aes(PC1, PC2)) +
   geom_text_repel(data = filter(etiquetas, abajo), aes(label = nombre), family = fuente_texto,
                   fontface = "bold", size = 3.3, color = gris_titulo,
                   segment.color = NA, min.segment.length = Inf, nudge_y = -0.6, box.padding = 0.2, seed = 1) +
+  # extremos de cada año: anillo gris oscuro y texto en cursiva, distinto de los ejemplos
+  geom_point(data = extremos, shape = 21, fill = NA, color = gris_titulo,
+             size = 4.4, stroke = 0.8) +
+  geom_text_repel(data = filter(extremos, !abajo), aes(label = texto), family = fuente_texto,
+                  fontface = "italic", size = 3, color = gris_texto,
+                  segment.color = NA, min.segment.length = Inf, nudge_y = 0.7,
+                  box.padding = 0.2, seed = 2) +
+  geom_text_repel(data = filter(extremos, abajo), aes(label = texto), family = fuente_texto,
+                  fontface = "italic", size = 3, color = gris_texto,
+                  segment.color = NA, min.segment.length = Inf, nudge_y = -0.7,
+                  box.padding = 0.2, seed = 2) +
   # mediana del grupo: triángulo 1,5 veces el tamaño de los círculos, borde negro grueso
   geom_point(data = resumen, aes(x, y, fill = perfil), inherit.aes = FALSE,
              shape = 24, size = 3.9, color = "black", stroke = 1.1) +
@@ -238,7 +301,7 @@ grafico_exploratorio <- ggplot(puntos, aes(PC1, PC2)) +
       "El perfil joven tiene más fecundidad y crecimiento poblacional que el avanzado, y menos",
       "población de 65+ y esperanza de vida. Los perfiles se definen en cada año en relación con el",
       "resto de los países, mientras la posición usa una escala común. El triángulo representa la",
-      "mediana del grupo. Se señala un país representativo del perfil a modo de ejemplo."
+      "mediana del grupo. Se señalan países de ejemplo y, con un anillo, el más joven y el más envejecido de cada año."
     ),
     x = paste0("Componente 1: perfiles más envejecidos\n",
                "(hacia la derecha, más población de 65+ y esperanza de vida, menos fecundidad y crecimiento)"),
@@ -286,3 +349,6 @@ grafico_exploratorio
 ggsave("grupo_10_exploratorio.jpg", grafico_exploratorio,
        width = 22, height = 24, units = "cm", dpi = 300, bg = "white", quality = 95)
 
+# Revisar en el JPG al 100%:
+# - si los paneles quedan muy bajos, subir height (26-28) o bajar el texto;
+# - si las etiquetas de países molestan, sacarlas (son opcionales).
