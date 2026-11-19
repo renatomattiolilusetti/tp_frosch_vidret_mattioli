@@ -2,7 +2,9 @@
 # Descarga
 # ==============================================================================
 
-install.packages(c("tidyverse", "skimr", "readr", "mice", "naniar", "WDI", "car", "lmtest", "sandwich","gt","webshot2", "ggrepel"))
+install.packages(c("tidyverse", "skimr", "readr", "mice", "naniar", "WDI", "car", 
+                   "lmtest", "sandwich","gt","webshot2", "ggrepel", "FactoMineR", 
+                   "sf", "rnaturalearth", "rnaturalearthdata", "ggtext", "patchwork"))
 
 library(tidyverse)
 library(skimr)
