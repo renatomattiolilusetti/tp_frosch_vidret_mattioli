@@ -1433,3 +1433,28 @@ gtsave(
   zoom = 2
 )
 
+
+# ==============================================================================
+# Control final de archivos generados
+# ==============================================================================
+
+archivos_generados <- c(
+  "output/tablas/calidad_clusters_demograficos.csv",
+  "output/tablas/caracterizacion_clusters_demograficos.csv",
+  "output/tablas/perfiles_paises_demograficos.csv",
+  "output/tablas/varianza_pca_demografico.csv",
+  "output/tablas/trayectorias_paises_demograficos.csv",
+  "output/tablas/tabla_trayectorias.png",
+  "output/tablas/tabla_perfiles_demograficos.png",
+  "output/graficos/silhouette_clusters.png",
+  "output/graficos/correlaciones_2024.png",
+  "output/graficos/evolucion_clusters.png",
+  "output/graficos/silhouette_por_cluster.png",
+  "auxiliar/perfiles_clusters_1980_2024.csv",
+  "auxiliar/base_cluster_demografico_cortes.csv"
+)
+
+stopifnot(all(file.exists(archivos_generados)))
+
+print("03.02 finalizado: todos los archivos fueron generados.")
+
