@@ -5,7 +5,7 @@
 library(tidyverse)
 
 # 1. Cargar la base de datos limpia
-wdi_limpia <- read_csv("repo_wdi/wdi_limpia.csv")
+wdi_limpia <- read_csv("input/wdi_limpia.csv")
 
 # 2. Calcular la Tasa de Dependencia Mayor (DM) para el año 2019 de forma dinámica
 datos_2019_demografia <- wdi_limpia %>% 

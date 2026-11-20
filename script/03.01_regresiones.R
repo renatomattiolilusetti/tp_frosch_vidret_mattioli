@@ -25,174 +25,20 @@ variables_atipicos <- c(
   "gasto_publico_salud_pib"
 )
 
-diagnosticar_outliers <- function(anio_objetivo) {
-    base_anio <- wdi_limpia |>
-    filter(anio == anio_objetivo) |>
-    mutate(
-      migracion_relativa = 100 * migracion_neta / poblacion_total,
-      log_pib_pc = log(pib_per_capita_ppa)
-    ) |>
-    select(codigo_pais, pais, all_of(variables_atipicos))
-  
-  # Identificar países por código evita problemas con nombres repetidos.
-  stopifnot(!anyNA(base_anio$codigo_pais))
-  stopifnot(!anyDuplicated(base_anio$codigo_pais))
-  
-  # Control igual para 2000, 2010 y 2019: datos válidos, faltantes, infinitos.
-  disponibilidad <- base_anio |>
-    pivot_longer(
-      cols = all_of(variables_atipicos),
-      names_to = "variable", values_to = "valor"
-    ) |>
-    group_by(variable) |>
-    summarise(
-      disponibles = sum(is.finite(valor)),
-      faltantes = sum(is.na(valor)),
-      infinitos = sum(is.infinite(valor)),
-      .groups = "drop"
-  ) |>
-  mutate(
-    porcentaje_faltantes = round(
-      100 * faltantes /
-        (disponibles + faltantes + infinitos),
-      2
-    )
-  )
-    if (any(disponibilidad$infinitos > 0)) {
-    stop(paste("Hay infinitos en el año", anio_objetivo,
-               ": revisar cocientes y logaritmos antes del IQR."))
-  }
-  
-  # IQR por variable, utilizando las observaciones disponibles.
-  outliers <- base_anio |>
-    pivot_longer(
-      cols = all_of(variables_atipicos),
-      names_to = "variable", values_to = "valor",
-      values_drop_na = TRUE
-    ) |>
-    group_by(variable) |>
-    mutate(
-      q1 = quantile(valor, 0.25),
-      q3 = quantile(valor, 0.75),
-      rango_iqr = q3 - q1,
-      limite_inferior = q1 - 1.5 * rango_iqr,
-      limite_superior = q3 + 1.5 * rango_iqr
-    ) |>
-    filter(valor < limite_inferior | valor > limite_superior) |>
-    ungroup() |>
-    select(codigo_pais, pais, variable, valor,
-           limite_inferior, limite_superior) |>
-    arrange(variable, valor)
-  
-  # Ventana temporal de 5 años a cada lado, sin incluir el central
-  trayectorias <- wdi_limpia |>
-    filter(
-      codigo_pais %in% outliers$codigo_pais,
-      anio >= anio_objetivo - 5,
-      anio <= anio_objetivo + 5
-    ) |>
-    mutate(
-      migracion_relativa = 100 * migracion_neta / poblacion_total,
-      log_pib_pc = log(pib_per_capita_ppa)
-    ) |>
-    select(codigo_pais, pais, anio, all_of(variables_atipicos)) |>
-    pivot_longer(
-      cols = all_of(variables_atipicos),
-      names_to = "variable", values_to = "valor"
-    ) |>
-    semi_join(
-      outliers |> select(codigo_pais, variable),
-      by = c("codigo_pais", "variable")
-    )
-  
-  stopifnot(!anyDuplicated(
-    trayectorias |> select(codigo_pais, variable, anio)
-  ))
-  
-  # Comparación local y MAD 
-  resumen_temporal <- trayectorias |>
-    filter(anio != anio_objetivo) |>
-    group_by(codigo_pais, pais, variable) |>
-    summarise(
-      anios_antes = sum(anio < anio_objetivo & !is.na(valor)),
-      anios_despues = sum(anio > anio_objetivo & !is.na(valor)),
-      mediana_vecinos = if (all(is.na(valor))) NA_real_
-      else median(valor, na.rm = TRUE),
-      minimo_vecinos = if (all(is.na(valor))) NA_real_
-      else min(valor, na.rm = TRUE),
-      maximo_vecinos = if (all(is.na(valor))) NA_real_
-      else max(valor, na.rm = TRUE),
-      mad_vecinos = if (all(is.na(valor))) NA_real_
-      else mad(valor, na.rm = TRUE),
-      .groups = "drop"
-    ) |>
-    left_join(
-      outliers |> select(codigo_pais, variable, valor),
-      by = c("codigo_pais", "variable"),
-      relationship = "one-to-one"
-    ) |>
-    mutate(
-      revision_temporal = case_when(
-        anios_antes < 3 | anios_despues < 3 ~ "Cobertura insuficiente",
-        valor < minimo_vecinos | valor > maximo_vecinos ~
-          "Fuera del rango local",
-        TRUE ~ "Dentro del rango local"
-      ),
-      desvio_robusto = case_when(
-        is.na(mad_vecinos) | mad_vecinos == 0 ~ NA_real_,
-        TRUE ~ abs(valor - mediana_vecinos) / mad_vecinos
-      )
-    ) |>
-    arrange(desc(desvio_robusto))
-  
-  # Selección uniforme para inspección visual, NO para eliminación:
-  # >3 MAD, fuera del rango local, cobertura insuficiente
-  casos_prioritarios <- resumen_temporal |>
-    filter(
-      desvio_robusto > 3 |
-        revision_temporal != "Dentro del rango local" |
-        (anio_objetivo == 2019 & codigo_pais == "CAF" &
-           variable == "esperanza_vida")
-    ) |>
-    select(codigo_pais, variable)
-  
-  trayectorias_prioritarias <- trayectorias |>
-    semi_join(casos_prioritarios, by = c("codigo_pais", "variable"))
-  
-  grafico <- if (nrow(trayectorias_prioritarias) > 0) {
-    ggplot(
-      trayectorias_prioritarias |> filter(is.finite(valor)),
-      aes(x = anio, y = valor)
-    ) +
-      geom_line() +
-      geom_point() +
-      geom_vline(xintercept = anio_objetivo, linetype = "dashed") +
-      facet_wrap(~ pais + variable, scales = "free_y", ncol = 2) +
-      labs(
-        title = paste("Revisión temporal de outliers:", anio_objetivo),
-        subtitle = paste(anio_objetivo - 5, "a", anio_objetivo + 5),
-        x = "Año", y = "Valor de la variable"
-      ) +
-      theme_minimal()
-  } else {
-    NULL
-  }
-  
-  list(
-    disponibilidad = disponibilidad,
-    outliers = outliers,
-    trayectorias = trayectorias,
-    resumen_temporal = resumen_temporal,
-    casos_prioritarios = casos_prioritarios,
-    trayectorias_prioritarias = trayectorias_prioritarias,
-    grafico = grafico
-  )
-}
+# Cargar la función de diagnóstico de outliers
+source("utils/diagnosticar_outliers.R")
 
-# Ejecutar el MISMO diagnóstico para los tres cortes.
-diag_2000 <- diagnosticar_outliers(2000)
-diag_2010 <- diagnosticar_outliers(2010)
-diag_2019 <- diagnosticar_outliers(2019)
+diag_2000 <- diagnosticar_outliers(
+  2000, wdi_limpia, variables_atipicos
+)
+
+diag_2010 <- diagnosticar_outliers(
+  2010, wdi_limpia, variables_atipicos
+)
+
+diag_2019 <- diagnosticar_outliers(
+  2019, wdi_limpia, variables_atipicos
+)
 
 # Tabla global comparable de outliers.
 resumen_outliers <- bind_rows(
@@ -1298,12 +1144,7 @@ modelo_2_2019 <- lm(
 
 # Función que calcula errores estándar robustos HC1
 
-tabla_hc1 <- function(modelo) {
-  lmtest::coeftest(
-    modelo,
-    vcov. = sandwich::vcovHC(modelo, type = "HC1")
-  )
-}
+source("utils/tabla_hc1.R")
 
 # Reunir todas las regresiones MCO ya estimadas
 
@@ -1339,29 +1180,58 @@ resultados_hc1$completo_2010
 resultados_hc1$completo_2019
 
 # Función para comparar dos modelos con prueba de Wald robusta
-wald_hc1 <- function(modelo_reducido, modelo_completo) {
+
+source("utils/wald_hc1.R")
+
+# Guardar los resultados de las seis comparaciones
+pruebas_wald_hc1 <- list(
   
-  lmtest::waldtest(
-    modelo_reducido,
-    modelo_completo,
-    vcov = function(modelo) {
-      sandwich::vcovHC(modelo, type = "HC1")
-    },
-    test = "F"
-  )
-}
+  "2000_demografico_vs_intermedio" =
+    wald_hc1(modelo_1_2000, modelo_2_2000),
+  
+  "2000_intermedio_vs_completo" =
+    wald_hc1(modelo_2_2000, modelo_2000),
+  
+  "2010_demografico_vs_intermedio" =
+    wald_hc1(modelo_1_2010, modelo_2_2010),
+  
+  "2010_intermedio_vs_completo" =
+    wald_hc1(modelo_2_2010, modelo_2010),
+  
+  "2019_demografico_vs_intermedio" =
+    wald_hc1(modelo_1_2019, modelo_2_2019),
+  
+  "2019_intermedio_vs_completo" =
+    wald_hc1(modelo_2_2019, modelo_2019)
+  
+)
 
-# Año 2000
-wald_hc1(modelo_1_2000, modelo_2_2000)
-wald_hc1(modelo_2_2000, modelo_2000)
+# Reunir las seis pruebas en una tabla
+tabla_wald_hc1 <- purrr::imap_dfr(
+  pruebas_wald_hc1,
+  
+  function(resultado, comparacion) {
+    
+    tibble(
+      anio = as.integer(substr(comparacion, 1, 4)),
+      comparacion = comparacion,
+      estadistico_F = as.numeric(resultado[2, "F"]),
+      gl_numerador = abs(as.numeric(resultado[2, "Df"])),
+      gl_denominador = as.numeric(resultado[2, "Res.Df"]),
+      p_valor = as.numeric(resultado[2, "Pr(>F)"])
+    )
+    
+  }
+)
 
-# Año 2010
-wald_hc1(modelo_1_2010, modelo_2_2010)
-wald_hc1(modelo_2_2010, modelo_2010)
 
-# Año 2019
-wald_hc1(modelo_1_2019, modelo_2_2019)
-wald_hc1(modelo_2_2019, modelo_2019)
+# Comprobar que tenemos las seis pruebas
+stopifnot(
+  nrow(tabla_wald_hc1) == 6
+)
+
+# Mostrar los resultados
+print(tabla_wald_hc1, n = Inf)
 
 ##### Tablas de modelos progresivos con HC1 ####################
 
@@ -1522,3 +1392,56 @@ ggsave(
   dpi = 300,
   bg = "white"
 )
+
+# 8. Documentar el tratamiento de República Centroafricana
+write_csv(
+  registro_tratamiento,
+  "output/tablas/tratamiento_caf_2019.csv"
+)
+
+# 9. Efecto del tratamiento sobre los estadísticos descriptivos
+write_csv(
+  impacto_limpieza_2019,
+  "output/tablas/impacto_tratamiento_caf_2019.csv"
+)
+
+# 10. Pruebas de Wald robustas HC1
+write_csv(
+  tabla_wald_hc1,
+  "output/tablas/pruebas_wald_hc1.csv"
+)
+
+# 11. Validación final de los resultados
+
+# Archivos que debe generar el script
+archivos_esperados <- c(
+  "output/tablas/comparacion_modelos.csv",
+  "output/tablas/coeficientes_modelos_hc1.csv",
+  "output/tablas/regresiones_mice_hc1.csv",
+  "output/tablas/test_breusch_pagan.csv",
+  "output/tablas/sensibilidad_caf_2019.csv",
+  "output/tablas/outliers_regresiones.csv",
+  "output/tablas/pruebas_wald_hc1.csv",
+  "output/tablas/tratamiento_caf_2019.csv",
+  "output/tablas/impacto_tratamiento_caf_2019.csv",
+  "output/graficos/correlaciones_regresores_2019.png"
+)
+
+# Identificar archivos faltantes
+archivos_faltantes <- archivos_esperados[
+  !file.exists(archivos_esperados)
+]
+
+# Detener la ejecución si falta alguno
+if (length(archivos_faltantes) > 0) {
+  stop(
+    "Faltan archivos en output/: ",
+    paste(archivos_faltantes, collapse = ", ")
+  )
+}
+
+# Confirmar que existen todos
+cat(
+  "\nValidación final: se encontraron todos los resultados esperados en output/.\n"
+)
+

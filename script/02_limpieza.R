@@ -179,6 +179,3 @@ wdi_limpia |>
     cantidad_anios = n_distinct(anio)
   ) |>
   print()
-
-# Para dejar una copia de esta base limpia, 
-write_csv(wdi_limpia, "repo_wdi/wdi_limpia.csv")

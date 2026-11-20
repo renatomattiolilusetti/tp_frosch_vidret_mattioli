@@ -2,7 +2,7 @@
 # Análisis de NA y Outliers
 # ==============================================================================
 
-wdi_limpia <- read_csv("repo_wdi/wdi_limpia.csv")
+wdi_limpia <- read_csv("input/wdi_limpia.csv")
 
 # Outliers ####
 
@@ -115,6 +115,31 @@ analisis_horizontal <- datos_horizontal |>
     )
   ) |>
   ungroup()
+
+# Exportar los outliers detectados en la base WDI
+
+outliers_horizontales_wdi <- analisis_horizontal |>
+  filter(outlier_horizontal == TRUE) |>
+  select(
+    codigo_pais,
+    pais,
+    anio,
+    variable,
+    valor,
+    tipo_outlier,
+    limite_inferior,
+    limite_superior
+  ) |>
+  arrange(codigo_pais, anio, variable)
+
+write_csv(
+  outliers_horizontales_wdi,
+  "output/tablas/outliers_horizontales_wdi.csv"
+)
+
+print(file.exists(
+  "output/tablas/outliers_horizontales_wdi.csv"
+))
 
 # Para ver cuántos outliers hay y qué peso tienen en cada variable-año
 
@@ -593,10 +618,11 @@ tabla_diagnostico_gt <- tabla_diagnostico_vertical |>
     data_row.padding = px(6)
   )
 
-
-# Ver la tabla
-
-#tabla_diagnostico_gt
+gt::gtsave(
+  tabla_diagnostico_gt,
+  "output/tablas/tabla_diagnostico_outliers.png",
+  zoom = 2
+)
 
 # ==============================================================================
 
@@ -744,6 +770,15 @@ grafico_na_decadas <- ggplot(
 
 # grafico_na_decadas
 
+ggsave(
+  "output/graficos/na_por_decada.png",
+  plot = grafico_na_decadas,
+  width = 12,
+  height = 7,
+  dpi = 300,
+  bg = "white"
+)
+
 # Mapa de calor por región
 
 na_region_relevantes <- wdi_limpia |>
@@ -846,7 +881,14 @@ grafico_na_region <- ggplot(
 
 # grafico_na_region
 
-#
+ggsave(
+  "output/graficos/na_por_region.png",
+  plot = grafico_na_region,
+  width = 12,
+  height = 7,
+  dpi = 300,
+  bg = "white"
+)
 
 # ============================================================
 # Diagnóstico de NA: todas las variables relevantes

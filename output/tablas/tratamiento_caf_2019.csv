@@ -1,0 +1,2 @@
+codigo_pais,pais,anio,variable,valor_original,tratamiento,motivo,imputacion
+CAF,Central African Republic,2019,esperanza_vida,31.53,NA en base pre-MCO,Discontinuidad temporal y discrepancia con OMS,"MICE existente del modelo de 2019 (pmm, m=20)"
