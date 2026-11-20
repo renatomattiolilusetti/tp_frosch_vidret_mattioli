@@ -769,6 +769,21 @@ trayectorias_no_lineales <- trayectorias_paises |>
 
 trayectorias_no_lineales
 
+# Exportación de resultados ####
+
+# Guardamos la caracterización de los clusters de los cuatro momentos analizados
+# para reutilizar estos resultados en los análisis longitudinales posteriores.
+
+perfiles_comparados |>
+  mutate(
+    perfil = if_else(
+      clust == 1,
+      "Joven y expansivo",
+      "Transición avanzada"
+    )
+  ) |>
+  write_csv("auxiliar/perfiles_clusters_1980_2024.csv")
+
 # Prueba de sensibilidad (sin outliers) ####
 
 # Si un país aparece como outlier al menos una vez en cualquiera de los cuatro años 
@@ -1400,3 +1415,4 @@ gtsave(
   "silhouette_por_cluster.png",
   zoom = 2
 )
+
