@@ -2,25 +2,15 @@
 # Descarga
 # ==============================================================================
 
-install.packages(c("tidyverse", "skimr", "readr", "mice", "naniar", "WDI", "car", 
-                   "lmtest", "sandwich","gt","webshot2", "ggrepel", "FactoMineR", 
-                   "sf", "rnaturalearth", "rnaturalearthdata", "ggtext", "patchwork"))
+# install.packages(c("tidyverse", "skimr", "readr", "mice", "naniar", "WDI", "car","lmtest", "sandwich","gt","webshot2", "ggrepel", "FactoMineR", "sf", "rnaturalearth", "rnaturalearthdata", "ggtext", "patchwork"))
 
 library(tidyverse)
-library(skimr)
-library(dplyr)
-library(mice)
-library(naniar)
 library(WDI)
-library(car)
-library(lmtest)
-library(sandwich)
 
 # Para generar una primer base cruda, a partir de las variables seleccionadas, 
 # durante el lapso de tiempo seleccionado
 
-wdi_raw <- WDI(
-  indicator =  c(
+indicadores <-  c(
     poblacion_total              = "SP.POP.TOTL",
     crecimiento_poblacional      = "SP.POP.GROW",
     natalidad                    = "SP.DYN.CBRT.IN",
@@ -86,11 +76,30 @@ wdi_raw <- WDI(
     varones_80_mas_pct           = "SP.POP.80UP.MA.5Y",
     mujeres_total_pct            = "SP.POP.TOTL.FE.ZS",   # También para pirámide: "Composición por sexo (% de la población total)".
     varones_total_pct            = "SP.POP.TOTL.MA.ZS"
-  ), 
-  start = 1960, end = 2025,
-  extra = TRUE)
+  )
 
-# Guardar la base cruda ####
+wdi_raw <- WDI(
+  indicator = indicadores,
+  start = 1960,
+  end = 2025,
+  extra = TRUE
+)
 
-# Para dejar una copia de la base cruda en la carpeta raw utilizamos: 
-#write_csv(wdi_raw, "raw/wdi_raw.csv")
+# Comprobar que se descargaron todos los indicadores
+variables_faltantes <- setdiff(
+  names(indicadores),
+  names(wdi_raw)
+)
+
+if (length(variables_faltantes) > 0) {
+  stop(
+    "Faltan indicadores: ",
+    paste(variables_faltantes, collapse = ", ")
+  )
+}
+
+# Guardar la base original
+write_csv(wdi_raw, "raw/wdi_raw.csv")
+
+# Comprobar las dimensiones de la descarga
+dim(wdi_raw)
