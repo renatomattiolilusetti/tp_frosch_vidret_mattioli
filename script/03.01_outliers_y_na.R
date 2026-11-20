@@ -2,18 +2,22 @@
 # Análisis de NA y Outliers
 # ==============================================================================
 
+library(tidyverse)
+library(gt)
+
 wdi_limpia <- read_csv("input/wdi_limpia.csv")
 
-# Outliers ####
 
-# Análisis HORIZONTAL ####
+# Verificar que cada país tenga una sola observación por año
+stopifnot(
+  !anyNA(wdi_limpia$codigo_pais),
+  !anyNA(wdi_limpia$anio),
+  !anyDuplicated(wdi_limpia[c("codigo_pais", "anio")])
+)
 
-# Para cada variable relevante y para cada año disponible, comparamos todos los países 
-# entre sí y detectamos qué observaciones son extremas respecto de la distribución 
-# de esa variable en ese año (contra el resto de países).
+# 1. Detección horizontal de outliers
 
-# Seleccionamos las variables relevantes:
-
+# Variables relevantes para el análisis
 variables_horizontal <- c(
   "poblacion_65_mas",
   "fecundidad",
@@ -29,14 +33,13 @@ variables_horizontal <- c(
   "indice_cobertura_salud"
 )
 
-# Trabajamos con todos los años disponibles:
-
-anios_horizontal <- sort(
-  unique(wdi_limpia$anio)
+# Verificar que todas las variables estén en la base
+stopifnot(
+  all(variables_horizontal %in% names(wdi_limpia))
 )
 
-# Formamos una base 
-
+# Pasar los datos a formato largo:
+# cada fila representa un país, un año y una variable
 datos_horizontal <- wdi_limpia |>
   select(
     pais,
@@ -50,57 +53,40 @@ datos_horizontal <- wdi_limpia |>
     values_to = "valor"
   )
 
-# Pasamos a ancho
+# Verificar que la transformación conserve todas las observaciones
+stopifnot(
+  nrow(datos_horizontal) ==
+    nrow(wdi_limpia) * length(variables_horizontal)
+)
 
-tabla_horizontal <- datos_horizontal |>
-  select(
-    anio,
-    variable,
-    pais,
-    valor
-  ) |>
-  pivot_wider(
-    names_from = pais,
-    values_from = valor
-  ) |>
-  arrange(
-    anio,
-    variable
-  )
-
-tabla_horizontal
-
-# Detectamos outliers de forma horizontal: dentro de cada año y variable, calculamos
-# Q1, Q2 e IQR usando los países que tienen dato y marcamos qué país queda fuera de 
-# los límites. Decidimos que una combinación año-variable se evalúa si cuenta con al 
-# menos 30 observaciones válidas.
-
-# para cuáles datos son outliers
-
+# Calcular cuartiles y detectar valores extremos por año y variable
 analisis_horizontal <- datos_horizontal |>
   group_by(anio, variable) |>
   mutate(
-    n_validos = sum(!is.na(valor)),
+    # Cantidad de valores numéricos válidos
+    n_validos = sum(is.finite(valor)),
     
-    q1 = if_else(
-      n_validos >= 30,
-      quantile(valor, 0.25, na.rm = TRUE),
+    # Primer y tercer cuartil
+    q1 = if (n_validos[1] >= 30) {
+      quantile(valor[is.finite(valor)], 0.25)
+    } else {
       NA_real_
-    ),
+    },
     
-    q3 = if_else(
-      n_validos >= 30,
-      quantile(valor, 0.75, na.rm = TRUE),
+    q3 = if (n_validos[1] >= 30) {
+      quantile(valor[is.finite(valor)], 0.75)
+    } else {
       NA_real_
-    ),
+    },
     
+    # Rango intercuartílico y límites
     iqr = q3 - q1,
-    
     limite_inferior = q1 - 1.5 * iqr,
     limite_superior = q3 + 1.5 * iqr,
     
+    # Identificación de candidatos a outlier
     outlier_horizontal = case_when(
-      is.na(valor) ~ NA,
+      !is.finite(valor) ~ NA,
       n_validos < 30 ~ NA,
       valor < limite_inferior ~ TRUE,
       valor > limite_superior ~ TRUE,
@@ -115,6 +101,17 @@ analisis_horizontal <- datos_horizontal |>
     )
   ) |>
   ungroup()
+
+# Resumen general de la detección
+analisis_horizontal |>
+  summarise(
+    observaciones_evaluadas = sum(!is.na(outlier_horizontal)),
+    candidatos_outlier = sum(outlier_horizontal, na.rm = TRUE),
+    porcentaje_outliers = round(
+      100 * candidatos_outlier / observaciones_evaluadas, 2
+    )
+  ) |>
+  print()
 
 # Exportar los outliers detectados en la base WDI
 
@@ -186,10 +183,10 @@ recurrencia_outliers <- analisis_horizontal |>
 
 # Análisis VERTICAL ####
 
-# Necesitamos una comparación del valor outlier contra los valores cercanos del mismo
-# país. ESO nos va a confirmar que sea o no outlier.
-# Análisis robusto con mediana + MAD: chequeamos qué tan lejos estaría un valor de la 
-# mediana, en relación con la variabilidad habitual de esos años vecinos.
+# La comparación temporal permite evaluar si los candidatos detectados
+# horizontalmente también presentan desviaciones importantes respecto
+# de la trayectoria del propio país.
+# Una desviación temporal no demuestra que exista un error en los datos.
 
 # Solo necesitamos fijarnos en los que son outlier horizontal reconocido previamente.
 # Entonces, recortamos los candidatos.
@@ -222,47 +219,62 @@ candidatos_outliers |>
 # o posibles errores/ verdaderos valores atipicos.
 # Analizamos mismo país, misma variable --> 5 años antes y 5 años después.
 
-# Renombramos el año y el valor del outlier para diferenciarlos
-# de los años vecinos que vamos a buscar.
-
+# Identificamos el año y valor de cada candidato
 candidatos_vertical <- candidatos_outliers |>
   rename(
     anio_candidato = anio,
     valor_candidato = valor
   )
 
-# Para candidato, buscamos la misma variable del mismo país durante los 5 años
-# posteriores y anteriores
+# Verificamos que cada candidato sea único
+stopifnot(
+  !anyDuplicated(
+    candidatos_vertical[
+      c("codigo_pais", "anio_candidato", "variable")
+    ]
+  )
+)
 
+# Generamos los diez años vecinos de cada candidato
 vecinos_vertical <- candidatos_vertical |>
+  tidyr::crossing(
+    desfase = c(-5:-1, 1:5)
+  ) |>
+  mutate(
+    anio_vecino = anio_candidato + desfase
+  ) |>
   left_join(
     datos_horizontal |>
-      select(
-        pais,
-        codigo_pais,
-        anio,
-        variable,
-        valor
-      ) |>
+      select(codigo_pais, anio, variable, valor) |>
       rename(
         anio_vecino = anio,
         valor_vecino = valor
       ),
-    by = c(
-      "pais",
-      "codigo_pais",
-      "variable"
-    ),
-    relationship = "many-to-many"
+    by = c("codigo_pais", "variable", "anio_vecino"),
+    relationship = "many-to-one"
   ) |>
-  filter(
-    anio_vecino >= anio_candidato - 5,
-    anio_vecino <= anio_candidato + 5,
-    anio_vecino != anio_candidato
-  )
+  select(-desfase)
 
-# Resumimos la trayectoria local de cada candidato
+# Comprobamos que hay diez posiciones vecinas por candidato
+stopifnot(
+  nrow(vecinos_vertical) == nrow(candidatos_vertical) * 10
+)
 
+# Resumen de disponibilidad de los vecinos
+vecinos_vertical |>
+  summarise(
+    candidatos = n_distinct(
+      codigo_pais, anio_candidato, variable
+    ),
+    posiciones_vecinas = n(),
+    vecinos_con_dato = sum(is.finite(valor_vecino)),
+    vecinos_sin_dato = sum(!is.finite(valor_vecino))
+  ) |>
+  print()
+
+# 3. Diagnóstico vertical de los candidatos
+
+# Resumir los valores de los años vecinos
 diagnostico_vertical <- vecinos_vertical |>
   group_by(
     pais,
@@ -273,110 +285,91 @@ diagnostico_vertical <- vecinos_vertical |>
     tipo_outlier
   ) |>
   summarise(
+    # Cantidad de vecinos con datos válidos
+    n_vecinos = sum(is.finite(valor_vecino)),
     
-    n_vecinos = sum(!is.na(valor_vecino)),
+    n_antes = sum(
+      anio_vecino < anio_candidato & is.finite(valor_vecino)
+    ),
     
-    mediana_vecinos = if (
-      sum(!is.na(valor_vecino)) > 0
-    ) {
-      median(valor_vecino, na.rm = TRUE)
+    n_despues = sum(
+      anio_vecino > anio_candidato & is.finite(valor_vecino)
+    ),
+    
+    # Medidas de la trayectoria local
+    mediana_vecinos = if (n_vecinos >= 5) {
+      median(valor_vecino[is.finite(valor_vecino)])
     } else {
       NA_real_
     },
     
-    minimo_vecinos = if (
-      sum(!is.na(valor_vecino)) > 0
-    ) {
-      min(valor_vecino, na.rm = TRUE)
+    minimo_vecinos = if (n_vecinos >= 5) {
+      min(valor_vecino[is.finite(valor_vecino)])
     } else {
       NA_real_
     },
     
-    maximo_vecinos = if (
-      sum(!is.na(valor_vecino)) > 0
-    ) {
-      max(valor_vecino, na.rm = TRUE)
+    maximo_vecinos = if (n_vecinos >= 5) {
+      max(valor_vecino[is.finite(valor_vecino)])
     } else {
       NA_real_
     },
     
-    mad_vecinos = if (
-      sum(!is.na(valor_vecino)) >= 2
-    ) {
-      mad(valor_vecino, na.rm = TRUE)
+    mad_vecinos = if (n_vecinos >= 5) {
+      mad(valor_vecino[is.finite(valor_vecino)])
     } else {
       NA_real_
     },
     
     .groups = "drop"
-  )
-
-# Miramos ahora: el valor está fuera de todo lo observado en los años vecinos?
-# pero tambien con el criterio MAD de cuánto se aleja la mediana en términos del MAD.
-
-diagnostico_vertical <- diagnostico_vertical |>
+  ) |>
   mutate(
+    # Comprobar si el candidato excede el rango observado
+    fuera_rango_local = case_when(
+      n_vecinos < 5 ~ NA,
+      valor_candidato < minimo_vecinos ~ TRUE,
+      valor_candidato > maximo_vecinos ~ TRUE,
+      TRUE ~ FALSE
+    ),
     
-    # ¿Está fuera de todo lo observado en los años vecinos?
-    fuera_rango_local =
-      valor_candidato < minimo_vecinos |
-      valor_candidato > maximo_vecinos,
-    
-    # ¿Cuánto se aleja de la mediana en términos del MAD?
+    # Desvío respecto de la mediana en unidades de MAD
     z_robusto = if_else(
-      !is.na(mad_vecinos) & mad_vecinos > 0,
+      n_vecinos >= 5 & is.finite(mad_vecinos) & mad_vecinos > 0,
       abs(valor_candidato - mediana_vecinos) / mad_vecinos,
       NA_real_
     )
   )
 
-# Resumimos diagnostico en base a lo anterior:
+# Comprobar que seguimos teniendo un registro por candidato
+stopifnot(
+  nrow(diagnostico_vertical) == nrow(candidatos_vertical)
+)
 
+# Evaluar la disponibilidad del diagnóstico
 diagnostico_vertical |>
   summarise(
-    total = n(),
-    
-    fuera_rango =
-      sum(fuera_rango_local == TRUE, na.rm = TRUE),
-    
-    supera_3_mad =
-      sum(z_robusto > 3, na.rm = TRUE),
-    
-    cumple_ambos =
-      sum(
-        fuera_rango_local == TRUE &
-          z_robusto > 3,
-        na.rm = TRUE
-      )
-  )
-
-# Cuántos no pudieron evaluarse bien con MAD por tener pocos años vecinos con datos
-# o MAD=0? (problema ante NA)
-
-diagnostico_vertical |>
-  summarise(
-    z_na = sum(is.na(z_robusto)),
+    total_candidatos = n(),
+    suficientes_vecinos = sum(n_vecinos >= 5),
+    pocos_vecinos = sum(n_vecinos < 5),
     mad_cero = sum(mad_vecinos == 0, na.rm = TRUE),
-    pocos_vecinos = sum(n_vecinos < 5)
-  )
+    z_disponible = sum(is.finite(z_robusto)),
+    sin_ambos_lados = sum(n_antes == 0 | n_despues == 0)
+  ) |>
+  print()
 
-diagnostico_vertical |>
-  filter(is.na(z_robusto)) |>
-  select(
-    pais,
-    variable,
-    anio_candidato,
-    valor_candidato,
-    n_vecinos,
-    mad_vecinos
-  )
-
-# Clasificación de los candidatos segun el diagnóstico vertical:
+# 4. Clasificación de los candidatos según el diagnóstico vertical
 
 diagnostico_vertical <- diagnostico_vertical |>
   mutate(
+    # Registrar si la comparación tiene datos anteriores y posteriores
+    cobertura_temporal = if_else(
+      n_antes > 0 & n_despues > 0,
+      "Ambos lados",
+      "Un solo lado"
+    ),
+    
+    # Clasificar según el rango local y el criterio de 3 MAD
     clasificacion_vertical = case_when(
-      
       is.na(z_robusto) ~ "No evaluable con MAD",
       
       fuera_rango_local == TRUE &
@@ -392,8 +385,22 @@ diagnostico_vertical <- diagnostico_vertical |>
     )
   )
 
+# Cantidad de candidatos por clasificación
 diagnostico_vertical |>
-  count(clasificacion_vertical, sort = TRUE)
+  count(clasificacion_vertical, sort = TRUE) |>
+  print(n = Inf)
+
+# Examinar si las alertas tienen cobertura temporal bilateral
+diagnostico_vertical |>
+  count(clasificacion_vertical, cobertura_temporal) |>
+  print(n = Inf)
+
+
+# Verificar que todos los candidatos hayan sido clasificados
+stopifnot(
+  !anyNA(diagnostico_vertical$clasificacion_vertical),
+  nrow(diagnostico_vertical) == nrow(candidatos_vertical)
+)
 
 # En qué variables aparecen los 334 casos que son raros tanto horizontalmente como 
 # con respecto a de la trayectoria del propio país?
@@ -623,8 +630,6 @@ gt::gtsave(
   "output/tablas/tabla_diagnostico_outliers.png",
   zoom = 2
 )
-
-# ==============================================================================
 
 # NA ####
 
@@ -942,41 +947,25 @@ tabla_na_anios_elegidos <- tabla_na_anual |>
 
 View(tabla_na_anios_elegidos)
 
-# ============================================================
-# Test de Little: variables estandarizadas
-# ============================================================
 
-# Estandarizamos las 12 variables
-datos_mcar_2019_std <- datos_mcar_2019 |>
-  mutate(
-    across(
-      everything(),
-      ~ as.numeric(scale(.))
-    )
-  )
+# ==============================================================================
+# Test de Little: diagnóstico del mecanismo de datos faltantes
+# ==============================================================================
 
-# Verificamos que los NA no hayan cambiado
-colSums(is.na(datos_mcar_2019_std))
+# Años relevantes para los análisis
+anios_mcar <- c(2000, 2010, 2019, 2023)
 
-# Reintentamos el test de Little
-resultado_mcar_2019_std <- naniar::mcar_test(
-  datos_mcar_2019_std
-)
+# Tabla para almacenar los resultados
+resultados_little <- tibble()
 
-resultado_mcar_2019_std
-
-# ============================================================
-# Test de Little para 2000, 2010 y 2023
-# ============================================================
-
-for (anio_elegido in c(2000, 2010, 2023)) {
+for (anio_elegido in anios_mcar) {
   
-  # Seleccionamos el año
+  # Seleccionar los datos del año correspondiente
   datos_mcar <- wdi_limpia |>
     filter(anio == anio_elegido) |>
     select(all_of(variables_relevantes))
   
-  # Estandarizamos
+  # Estandarizar las variables
   datos_mcar_std <- datos_mcar |>
     mutate(
       across(
@@ -985,13 +974,31 @@ for (anio_elegido in c(2000, 2010, 2023)) {
       )
     )
   
-  # Ejecutamos el test
-  resultado <- naniar::mcar_test(datos_mcar_std)
+  # Verificar que la estandarización no alteró los NA
+  stopifnot(
+    identical(is.na(datos_mcar), is.na(datos_mcar_std))
+  )
   
-  # Mostramos los resultados
-  cat("\nAño:", anio_elegido, "\n")
-  print(resultado)
+  # Ejecutar el test de Little
+  resultado_anio <- naniar::mcar_test(datos_mcar_std) |>
+    mutate(anio = anio_elegido, .before = 1)
+  
+  # Guardar el resultado de este año
+  resultados_little <- bind_rows(
+    resultados_little,
+    resultado_anio
+  )
 }
+
+# Mostrar todos los resultados
+print(resultados_little, n = Inf)
+
+# Exportar la tabla
+write_csv(
+  resultados_little,
+  "output/tablas/test_little.csv"
+)
+
 
 # ============================================================
 # Tabla resumen de NA por variable (1960-2025)
@@ -1022,5 +1029,47 @@ tabla_na_total <- wdi_limpia |>
   ) |>
   arrange(desc(porcentaje_na))
 
-# Ver la tabla completa
-View(tabla_na_total)
+# Exportación de resultados
+
+# Diagnóstico horizontal: resumen por variable y año
+write_csv(
+  resumen_outliers_horizontal,
+  "output/tablas/resumen_outliers_horizontal.csv"
+)
+
+# Diagnóstico vertical: todos los candidatos y sus criterios
+write_csv(
+  diagnostico_vertical,
+  "output/tablas/diagnostico_vertical_completo.csv"
+)
+
+# Datos faltantes: evolución anual
+write_csv(
+  tabla_na_anual,
+  "output/tablas/na_por_anio.csv"
+)
+
+# Datos faltantes: años relevantes para los análisis
+write_csv(
+  tabla_na_anios_elegidos,
+  "output/tablas/na_anios_elegidos.csv"
+)
+
+# Datos faltantes: resumen general
+write_csv(
+  tabla_na_total,
+  "output/tablas/na_resumen_general.csv"
+)
+
+# Verificar que todos los archivos se guardaron
+archivos_resultados <- c(
+  "output/tablas/resumen_outliers_horizontal.csv",
+  "output/tablas/diagnostico_vertical_completo.csv",
+  "output/tablas/na_por_anio.csv",
+  "output/tablas/na_anios_elegidos.csv",
+  "output/tablas/na_resumen_general.csv"
+)
+
+stopifnot(all(file.exists(archivos_resultados)))
+
+print("Todos los resultados se guardaron correctamente.")
