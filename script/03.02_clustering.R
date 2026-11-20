@@ -2,16 +2,35 @@
 # Clustering demográficos
 # ==============================================================================
 
-# install.packages("gt")
-library(dplyr)
-library(webshot2)
+# ==============================================================================
+# 03.02 - Clustering demográfico
+# ==============================================================================
+# Objetivo: identificar perfiles demográficos en 1980, 1995, 2010 y 2024,
+# y estudiar cómo cambian los países entre esos perfiles.
+# ==============================================================================
+
+# 1. Cargar paquetes
 library(tidyverse)
-library(tidyr)
-library(ggplot2)
 library(cluster)
-library(gt)
 library(FactoMineR)
-wdi_limpia <- read_csv("repo_wdi/wdi_limpia.csv")
+library(gt)
+
+# 2. Fijar semilla para reproducibilidad
+set.seed(42)
+
+# 3. Leer la base limpia
+wdi_limpia <- read_csv(
+  "input/wdi_limpia.csv",
+  show_col_types = FALSE
+)
+
+# 4. Verificar que haya una observación por país y año
+stopifnot(
+  !anyDuplicated(wdi_limpia[c("codigo_pais", "anio")])
+)
+
+# 5. Mostrar las dimensiones
+print(dim(wdi_limpia))
 
 # Buscamos identificar qué perfiles demográficos existen en distintos momentos 
 # del tiempo y observar si los países cambian entre esos perfiles. 
@@ -58,601 +77,500 @@ cobertura_cluster_demografico <- base_cluster_demografico |>
     .groups = "drop"
   )
 
-# Los momentos elegidos son 2024, 2010, 1995 y 1980. Pero 1980 tiene un país con 
-# datos faltantes. Analizamos primero esto:
+anios_analisis <- c(1980, 1995, 2010, 2024)
 
-datos_1980 <- wdi_limpia |>
-  filter(anio == 1980) |>
-  select(
-    pais,
-    codigo_pais,
-    poblacion_65_mas,
-    fecundidad,
-    esperanza_vida,
-    crecimiento_poblacional
-  )
+# Cantidad de países con información disponible
+cobertura_cluster_demografico |>
+  filter(anio %in% anios_analisis) |>
+  print(n = Inf)
 
-# Lo identificamos 
 
-datos_1980 |>
+# Identificar países con alguna variable faltante
+paises_incompletos <- base_cluster_demografico |>
+  filter(anio %in% anios_analisis) |>
   filter(
-    is.na(poblacion_65_mas) |
-      is.na(fecundidad) |
-      is.na(esperanza_vida) |
-      is.na(crecimiento_poblacional)
+    if_any(all_of(vars_demograficas), is.na)
+  ) |>
+  arrange(anio, pais)
+
+print(paises_incompletos, n = Inf)
+
+# Identificar países con información incompleta
+paises_excluidos_cluster <- paises_incompletos |>
+  distinct(codigo_pais, pais)
+
+print(paises_excluidos_cluster)
+
+# Excluir esos países de los cuatro períodos
+base_cluster_demografico <- base_cluster_demografico |>
+  filter(
+    !codigo_pais %in% paises_excluidos_cluster$codigo_pais
   )
 
-# El país faltante es West Bank and Gaza. Para ver qué hacemos con él, revisamos 
-# qué pasa con los faltantes de los años cercanos. No hay completitud en los datos
-# desde 1960-1991 (pero en 1960 se corresponde a 0 datos en paises_crecimiento).
+# Comprobar la cantidad de países y los faltantes
+control_muestra_cluster <- base_cluster_demografico |>
+  filter(anio %in% anios_analisis) |>
+  group_by(anio) |>
+  summarise(
+    paises = n_distinct(codigo_pais),
+    filas_incompletas = sum(
+      if_any(all_of(vars_demograficas), is.na)
+    ),
+    .groups = "drop"
+  )
 
-faltantes_1961_1991 <- wdi_limpia |>
-  filter(anio >= 1961, anio <= 1991) |>
-  select(
-    pais,
-    anio,
-    poblacion_65_mas,
-    fecundidad,
-    esperanza_vida,
-    crecimiento_poblacional
-  ) |>
-  mutate(
-    falta_65_mas = is.na(poblacion_65_mas),
-    falta_fecundidad = is.na(fecundidad),
-    falta_esperanza_vida = is.na(esperanza_vida),
-    falta_crecimiento = is.na(crecimiento_poblacional),
-    
-    cantidad_faltantes =
-      falta_65_mas +
-      falta_fecundidad +
-      falta_esperanza_vida +
-      falta_crecimiento
-  ) |>
-  filter(cantidad_faltantes > 0) |>
-  rowwise() |>
-  mutate(
-    variables_faltantes = paste(
-      c(
-        if (falta_65_mas) "poblacion_65_mas",
-        if (falta_fecundidad) "fecundidad",
-        if (falta_esperanza_vida) "esperanza_vida",
-        if (falta_crecimiento) "crecimiento_poblacional"
-      ),
-      collapse = ", "
-    )
-  ) |>
-  ungroup() |>
-  select(
-    anio,
-    pais,
-    cantidad_faltantes,
-    variables_faltantes
-  ) |>
-  arrange(desc(anio), pais)
+print(control_muestra_cluster)
 
-faltantes_1961_1991
+# Verificar que los cuatro años tengan igual cantidad
+# de países y ninguna observación incompleta
+stopifnot(
+  all(control_muestra_cluster$paises ==
+        control_muestra_cluster$paises[1]),
+  all(control_muestra_cluster$filas_incompletas == 0)
+)
 
-# La falta de información viene de un único país y afecta tres de las cuatro variables
-# utilizadas. Dado que imputarlas implicaría estimar prácticamente todo su perfil demográfico 
-# y que representa solo el 0,5% de la muestra, decidimos excluir del análisis a este caso.
+# Cortes temporales
 
-base_cluster_demografico <- base_cluster_demografico |>
-  filter(codigo_pais != "PSE")
-
-# Ahora sí, generamos los momentos:
-
+# Seleccionar los países de cada año
 datos_1980 <- base_cluster_demografico |>
-  filter(anio == 1980)
+  filter(anio == 1980) |>
+  arrange(codigo_pais)
 
 datos_1995 <- base_cluster_demografico |>
-  filter(anio == 1995)
+  filter(anio == 1995) |>
+  arrange(codigo_pais)
 
 datos_2010 <- base_cluster_demografico |>
-  filter(anio == 2010)
+  filter(anio == 2010) |>
+  arrange(codigo_pais)
 
 datos_2024 <- base_cluster_demografico |>
-  filter(anio == 2024)
+  filter(anio == 2024) |>
+  arrange(codigo_pais)
 
-# Prueba de cluster 2024 ####
 
-# Vemos las correlaciones entre las variables: si tienen correlación es lógico 
-# poder agruparlas.
-
-datos_2024 |>
-  select(
-    poblacion_65_mas,
-    fecundidad,
-    esperanza_vida,
-    crecimiento_poblacional
-  ) |>
-  cor() |>
-  round(2)
-
-# Armamos PCA demográfico
-# Matriz que entra al PCA:
-
-X_2024 <- datos_2024 |>
-  select(all_of(vars_demograficas)) |>
-  as.data.frame()
-
-rownames(X_2024) <- datos_2024$pais
-
-# Armamos PCA
-
-pca_2024 <- PCA(
-  X_2024,
-  scale.unit = TRUE, # estandarizamos las cuatro variables
-  ncp = 2,
-  graph = FALSE
+# Comprobar que los cuatro años contienen los mismos países
+stopifnot(
+  identical(datos_1980$codigo_pais, datos_1995$codigo_pais),
+  identical(datos_1980$codigo_pais, datos_2010$codigo_pais),
+  identical(datos_1980$codigo_pais, datos_2024$codigo_pais)
 )
 
-# Cuánta información explica cada componente
-
-pca_2024$eig
-
-# Cómo se relaciona cada variable con los componentes
-
-pca_2024$var$coord[, 1:2]
-
-# Contribución de cada variable a cada componente
-
-pca_2024$var$contrib[, 1:2]
-
-# Como PC1 junto con PC2 explican el 89% de la información, conservamos esos PC.
-
-# Coordenadas de los países en PC1 y PC2
-
-coords_2024 <- pca_2024$ind$coord[, 1:2]
-
-# Comparar distintas cantidades de clusters
-
-silhouette_2024 <- map_dfr(2:10, function(k) {
-  
-  hcpc_k <- HCPC(
-    pca_2024,
-    nb.clust = k,
-    consol = TRUE,
-    graph = FALSE
+# Mostrar la cantidad de países en cada año
+tibble(
+  anio = c(1980, 1995, 2010, 2024),
+  paises = c(
+    nrow(datos_1980),
+    nrow(datos_1995),
+    nrow(datos_2010),
+    nrow(datos_2024)
   )
-  
-  grupos_k <- as.integer(hcpc_k$data.clust$clust)
-  
-  sil_k <- silhouette(
-    grupos_k,
-    dist(coords_2024)
-  )
-  
-  tibble(
-    k = k,
-    silhouette_promedio = mean(sil_k[, "sil_width"]),
-    grupo_mas_chico = min(table(grupos_k))
-  )
-})
+) |>
+  print()
 
-silhouette_2024
+# PCA y clustering demográfico - 2024
 
-# Construimos el cluster definitivo, con separación en k=2.
+# Cargar nuestra función
+source("utils/pca_demografico.R")
 
-hcpc_2024_k2 <- HCPC(
+# Ejecutar el PCA de 2024
+resultado_pca_2024 <- pca_demografico(
+  datos_2024,
+  vars_demograficas
+)
+
+# Recuperar los resultados con los nombres originales
+X_2024 <- resultado_pca_2024$datos_pca
+
+matriz_correlaciones_2024 <- resultado_pca_2024$correlaciones
+
+pca_2024 <- resultado_pca_2024$pca
+
+coords_2024 <- resultado_pca_2024$coordenadas
+
+
+# Mostrar los resultados
+print(round(matriz_correlaciones_2024, 2))
+
+print(round(pca_2024$eig, 2))
+
+print(round(pca_2024$var$coord[, 1:2], 2))
+
+print(round(pca_2024$var$contrib[, 1:2], 2))
+
+# Selección cantidad de clusters 2024 
+
+# Cargar la función de evaluación
+source("utils/evaluar_clusters_demograficos.R")
+
+# Comparar soluciones de 2 a 10 clusters
+silhouette_2024 <- evaluar_clusters_demograficos(
   pca_2024,
-  nb.clust = 2,
-  consol = TRUE,
-  graph = FALSE
+  valores_k = 2:10
 )
 
-# Tamaño de cada grupo
+# Mostrar los resultados
+print(silhouette_2024, n = Inf)
 
-table(hcpc_2024_k2$data.clust$clust)
+# Clustering definitivo 2024
 
-# Analizamos silhouette por cluster
+# Cargar la función
+source("utils/clustering_demografico.R")
 
-grupos_2024 <- as.integer(hcpc_2024_k2$data.clust$clust)
-
-sil_2024 <- silhouette(
-  grupos_2024,
-  dist(coords_2024)
+# Ejecutar el clustering de 2024
+resultado_cluster_2024 <- clustering_demografico(
+  pca = pca_2024,
+  datos = datos_2024,
+  variables = vars_demograficas,
+  k = 2
 )
 
-as.data.frame(sil_2024) |>
-  as_tibble() |>
-  group_by(cluster) |>
-  summarise(
-    n = n(),
-    media = mean(sil_width),
-    mediana = median(sil_width),
-    negativos = sum(sil_width < 0)
-  )
+# Recuperar los resultados
+hcpc_2024_k2 <- resultado_cluster_2024$hcpc
 
-# Caracterizamos los dos perfiles demográficos
+perfiles_2024 <- resultado_cluster_2024$perfiles
 
-perfiles_2024 <- hcpc_2024_k2$data.clust |>
-  as.data.frame() |>
-  rownames_to_column("pais") |>
-  select(pais, clust)
+datos_2024_cluster <- resultado_cluster_2024$datos_cluster
 
-datos_2024_cluster <- datos_2024 |>
-  left_join(perfiles_2024, by = "pais")
+grupos_2024 <- resultado_cluster_2024$grupos
 
-datos_2024_cluster |>
-  group_by(clust) |>
-  summarise(
-    n = n(),
-    poblacion_65_mas = mean(poblacion_65_mas),
-    fecundidad = mean(fecundidad),
-    esperanza_vida = mean(esperanza_vida),
-    crecimiento_poblacional = mean(crecimiento_poblacional)
-  )
+sil_2024 <- resultado_cluster_2024$silhouette
 
-# Prueba de cluster 2010 ####
+caracterizacion_2024 <- resultado_cluster_2024$caracterizacion
 
-# Armamos mismo PCA
-
-X_2010 <- datos_2010 |>
-  select(all_of(vars_demograficas)) |>
-  as.data.frame()
-
-rownames(X_2010) <- datos_2010$pais
-
-pca_2010 <- PCA(
-  X_2010,
-  scale.unit = TRUE,
-  ncp = 2,
-  graph = FALSE
+# Mostrar los resultados
+cat(
+  "Silhouette media 2024:",
+  round(mean(sil_2024[, "sil_width"]), 3),
+  "\n"
 )
 
-# Cuánta información explica cada componente
+print(caracterizacion_2024, n = Inf)
 
-pca_2010$eig
+# PCA y clustering demográfico - 2010
 
-# Cómo se relacionan las variables con PC1 y PC2
+# 1. PCA
+resultado_pca_2010 <- pca_demografico(
+  datos_2010,
+  vars_demograficas
+)
 
-pca_2010$var$coord[, 1:2]
+X_2010 <- resultado_pca_2010$datos_pca
+matriz_correlaciones_2010 <- resultado_pca_2010$correlaciones
+pca_2010 <- resultado_pca_2010$pca
+coords_2010 <- resultado_pca_2010$coordenadas
 
-# Contribución de cada variable
+# Mostrar resultados del PCA
+print(round(matriz_correlaciones_2010, 2))
+print(round(pca_2010$eig, 2))
+print(round(pca_2010$var$coord[, 1:2], 2))
+print(round(pca_2010$var$contrib[, 1:2], 2))
 
-pca_2010$var$contrib[, 1:2]
 
-# Vemos qué cantidad de clusters funciona mejor:
-
-coords_2010 <- pca_2010$ind$coord[, 1:2]
-
-silhouette_2010 <- map_dfr(2:10, function(k) {
-  
-  hcpc_k <- HCPC(
-    pca_2010,
-    nb.clust = k,
-    consol = TRUE,
-    graph = FALSE
-  )
-  
-  grupos_k <- as.integer(hcpc_k$data.clust$clust)
-  
-  sil_k <- silhouette(
-    grupos_k,
-    dist(coords_2010)
-  )
-  
-  tibble(
-    k = k,
-    silhouette_promedio = mean(sil_k[, "sil_width"]),
-    grupo_mas_chico = min(table(grupos_k))
-  )
-})
-
-silhouette_2010
-
-# Nos quedamos con k=2 también para este período. Repetimos chequeo de silhouette
-# por grupo:
-
-hcpc_2010_k2 <- HCPC(
+# 2. Evaluar cantidades de clusters
+silhouette_2010 <- evaluar_clusters_demograficos(
   pca_2010,
-  nb.clust = 2,
-  consol = TRUE,
-  graph = FALSE
+  valores_k = 2:10
 )
 
-# Tamaño de cada grupo
+print(silhouette_2010, n = Inf)
 
-table(hcpc_2010_k2$data.clust$clust)
 
-# Silhouette por cluster
-
-grupos_2010 <- as.integer(hcpc_2010_k2$data.clust$clust)
-
-sil_2010 <- silhouette(
-  grupos_2010,
-  dist(coords_2010)
+# 3. Clustering definitivo con k = 2
+resultado_cluster_2010 <- clustering_demografico(
+  pca = pca_2010,
+  datos = datos_2010,
+  variables = vars_demograficas,
+  k = 2
 )
 
-as.data.frame(sil_2010) |>
-  as_tibble() |>
-  group_by(cluster) |>
-  summarise(
-    n = n(),
-    media = mean(sil_width),
-    mediana = median(sil_width),
-    negativos = sum(sil_width < 0)
-  )
+# Recuperar los resultados
+hcpc_2010_k2 <- resultado_cluster_2010$hcpc
+perfiles_2010 <- resultado_cluster_2010$perfiles
+datos_2010_cluster <- resultado_cluster_2010$datos_cluster
+grupos_2010 <- resultado_cluster_2010$grupos
+sil_2010 <- resultado_cluster_2010$silhouette
+caracterizacion_2010 <- resultado_cluster_2010$caracterizacion
 
-# Caracterizamos los dos perfiles:
-
-perfiles_2010 <- hcpc_2010_k2$data.clust |>
-  as.data.frame() |>
-  rownames_to_column("pais") |>
-  select(pais, clust)
-
-datos_2010_cluster <- datos_2010 |>
-  left_join(perfiles_2010, by = "pais")
-
-datos_2010_cluster |>
-  group_by(clust) |>
-  summarise(
-    n = n(),
-    poblacion_65_mas = mean(poblacion_65_mas),
-    fecundidad = mean(fecundidad),
-    esperanza_vida = mean(esperanza_vida),
-    crecimiento_poblacional = mean(crecimiento_poblacional)
-  )
-
-# Prueba de cluster 1995 ####
-
-# Armamos el PCA:
-
-X_1995 <- datos_1995 |>
-  select(all_of(vars_demograficas)) |>
-  as.data.frame()
-
-rownames(X_1995) <- datos_1995$pais
-
-pca_1995 <- PCA(
-  X_1995,
-  scale.unit = TRUE,
-  ncp = 2,
-  graph = FALSE
+# Mostrar resultados
+cat(
+  "Silhouette media 2010:",
+  round(mean(sil_2010[, "sil_width"]), 3),
+  "\n"
 )
 
-pca_1995$eig
-pca_1995$var$coord[, 1:2]
-pca_1995$var$contrib[, 1:2]
+print(caracterizacion_2010, n = Inf)
 
-# Repetimos el procedimiento de los clusters anteriores para elegir cantidad en 
-# este año
+# PCA y clustering demográfico - 1995
 
-coords_1995 <- pca_1995$ind$coord[, 1:2]
+# 1. PCA
+resultado_pca_1995 <- pca_demografico(
+  datos_1995,
+  vars_demograficas
+)
 
-silhouette_1995 <- map_dfr(2:10, function(k) {
-  
-  hcpc_k <- HCPC(
-    pca_1995,
-    nb.clust = k,
-    consol = TRUE,
-    graph = FALSE
-  )
-  
-  grupos_k <- as.integer(hcpc_k$data.clust$clust)
-  
-  sil_k <- silhouette(
-    grupos_k,
-    dist(coords_1995)
-  )
-  
-  tibble(
-    k = k,
-    silhouette_promedio = mean(sil_k[, "sil_width"]),
-    grupo_mas_chico = min(table(grupos_k))
-  )
-})
+X_1995 <- resultado_pca_1995$datos_pca
+matriz_correlaciones_1995 <- resultado_pca_1995$correlaciones
+pca_1995 <- resultado_pca_1995$pca
+coords_1995 <- resultado_pca_1995$coordenadas
 
-silhouette_1995
+# Mostrar resultados del PCA
+print(round(matriz_correlaciones_1995, 2))
+print(round(pca_1995$eig, 2))
+print(round(pca_1995$var$coord[, 1:2], 2))
+print(round(pca_1995$var$contrib[, 1:2], 2))
 
-# Seguimos con k=2
 
-hcpc_1995_k2 <- HCPC(
+# 2. Evaluar cantidades de clusters
+silhouette_1995 <- evaluar_clusters_demograficos(
   pca_1995,
-  nb.clust = 2,
-  consol = TRUE,
-  graph = FALSE
+  valores_k = 2:10
 )
 
-# Tamaño de cada grupo
+print(silhouette_1995, n = Inf)
 
-table(hcpc_1995_k2$data.clust$clust)
 
-# Silhouette por cluster
-
-grupos_1995 <- as.integer(hcpc_1995_k2$data.clust$clust)
-
-sil_1995 <- silhouette(
-  grupos_1995,
-  dist(coords_1995)
+# 3. Clustering definitivo con k = 2
+resultado_cluster_1995 <- clustering_demografico(
+  pca = pca_1995,
+  datos = datos_1995,
+  variables = vars_demograficas,
+  k = 2
 )
 
-as.data.frame(sil_1995) |>
-  as_tibble() |>
-  group_by(cluster) |>
-  summarise(
-    n = n(),
-    media = mean(sil_width),
-    mediana = median(sil_width),
-    negativos = sum(sil_width < 0)
-  )
+# Recuperar los resultados
+hcpc_1995_k2 <- resultado_cluster_1995$hcpc
+perfiles_1995 <- resultado_cluster_1995$perfiles
+datos_1995_cluster <- resultado_cluster_1995$datos_cluster
+grupos_1995 <- resultado_cluster_1995$grupos
+sil_1995 <- resultado_cluster_1995$silhouette
+caracterizacion_1995 <- resultado_cluster_1995$caracterizacion
 
-# Dejamos la caracterización de los dos perfiles
-
-perfiles_1995 <- hcpc_1995_k2$data.clust |>
-  as.data.frame() |>
-  rownames_to_column("pais") |>
-  select(pais, clust)
-
-datos_1995_cluster <- datos_1995 |>
-  left_join(perfiles_1995, by = "pais")
-
-datos_1995_cluster |>
-  group_by(clust) |>
-  summarise(
-    n = n(),
-    poblacion_65_mas = mean(poblacion_65_mas),
-    fecundidad = mean(fecundidad),
-    esperanza_vida = mean(esperanza_vida),
-    crecimiento_poblacional = mean(crecimiento_poblacional)
-  )
-
-# Prueba de cluster 1980 ####
-
-# Seguimos con 1980:
-
-X_1980 <- datos_1980 |>
-  select(all_of(vars_demograficas)) |>
-  as.data.frame()
-
-rownames(X_1980) <- datos_1980$pais
-
-pca_1980 <- PCA(
-  X_1980,
-  scale.unit = TRUE,
-  ncp = 2,
-  graph = FALSE
+# Mostrar resultados
+cat(
+  "Silhouette media 1995:",
+  round(mean(sil_1995[, "sil_width"]), 3),
+  "\n"
 )
 
-# Cuánta información explica cada componente
+print(caracterizacion_1995, n = Inf)
 
-pca_1980$eig
+# PCA y clustering demográfico - 1980
 
-# Cómo se relaciona cada variable con PC1 y PC2
+# 1. PCA
+resultado_pca_1980 <- pca_demografico(
+  datos_1980,
+  vars_demograficas
+)
 
-pca_1980$var$coord[, 1:2]
+X_1980 <- resultado_pca_1980$datos_pca
+matriz_correlaciones_1980 <- resultado_pca_1980$correlaciones
+pca_1980 <- resultado_pca_1980$pca
+coords_1980 <- resultado_pca_1980$coordenadas
 
-# Cuánto aporta cada variable a PC1 y PC2
+# Mostrar resultados del PCA
+print(round(matriz_correlaciones_1980, 2))
+print(round(pca_1980$eig, 2))
+print(round(pca_1980$var$coord[, 1:2], 2))
+print(round(pca_1980$var$contrib[, 1:2], 2))
 
-pca_1980$var$contrib[, 1:2]
 
-# Para ver selección de clusters:
-
-coords_1980 <- pca_1980$ind$coord[, 1:2]
-
-silhouette_1980 <- map_dfr(2:10, function(k) {
-  
-  hcpc_k <- HCPC(
-    pca_1980,
-    nb.clust = k,
-    consol = TRUE,
-    graph = FALSE
-  )
-  
-  grupos_k <- as.integer(hcpc_k$data.clust$clust)
-  
-  sil_k <- silhouette(
-    grupos_k,
-    dist(coords_1980)
-  )
-  
-  tibble(
-    k = k,
-    silhouette_promedio = mean(sil_k[, "sil_width"]),
-    grupo_mas_chico = min(table(grupos_k))
-  )
-})
-
-silhouette_1980
-
-# Efectivamente tambien conviene quedarnos con 2 grupos. Guardamos esta data:
-
-hcpc_1980_k2 <- HCPC(
+# 2. Evaluar cantidades de clusters
+silhouette_1980 <- evaluar_clusters_demograficos(
   pca_1980,
-  nb.clust = 2,
-  consol = TRUE,
-  graph = FALSE
+  valores_k = 2:10
 )
 
-table(hcpc_1980_k2$data.clust$clust)
+print(silhouette_1980, n = Inf)
 
-grupos_1980 <- as.integer(hcpc_1980_k2$data.clust$clust)
 
-sil_1980 <- silhouette(
-  grupos_1980,
-  dist(coords_1980)
+# 3. Clustering definitivo con k = 2
+resultado_cluster_1980 <- clustering_demografico(
+  pca = pca_1980,
+  datos = datos_1980,
+  variables = vars_demograficas,
+  k = 2
 )
 
-as.data.frame(sil_1980) |>
-  as_tibble() |>
-  group_by(cluster) |>
-  summarise(
-    n = n(),
-    media = mean(sil_width),
-    mediana = median(sil_width),
-    negativos = sum(sil_width < 0)
-  )
+# Recuperar los resultados
+hcpc_1980_k2 <- resultado_cluster_1980$hcpc
+perfiles_1980 <- resultado_cluster_1980$perfiles
+datos_1980_cluster <- resultado_cluster_1980$datos_cluster
+grupos_1980 <- resultado_cluster_1980$grupos
+sil_1980 <- resultado_cluster_1980$silhouette
+caracterizacion_1980 <- resultado_cluster_1980$caracterizacion
 
-# Caracterizamos los perfiles:
+# Mostrar resultados
+cat(
+  "Silhouette media 1980:",
+  round(mean(sil_1980[, "sil_width"]), 3),
+  "\n"
+)
 
-perfiles_1980 <- hcpc_1980_k2$data.clust |>
-  as.data.frame() |>
-  rownames_to_column("pais") |>
-  select(pais, clust)
+print(caracterizacion_1980, n = Inf)
 
-datos_1980_cluster <- datos_1980 |>
-  left_join(perfiles_1980, by = "pais")
+# Control de comparabilidad entre los cuatro años
 
-datos_1980_cluster |>
-  group_by(clust) |>
-  summarise(
-    n = n(),
-    poblacion_65_mas = mean(poblacion_65_mas),
-    fecundidad = mean(fecundidad),
-    esperanza_vida = mean(esperanza_vida),
-    crecimiento_poblacional = mean(crecimiento_poblacional)
-  )
+# Reunir las características demográficas de los clusters
+control_perfiles <- bind_rows(
+  caracterizacion_1980 |> mutate(anio = 1980),
+  caracterizacion_1995 |> mutate(anio = 1995),
+  caracterizacion_2010 |> mutate(anio = 2010),
+  caracterizacion_2024 |> mutate(anio = 2024)
+) |>
+  select(anio, clust, poblacion_65_mas) |>
+  mutate(clust = as.character(clust)) |>
+  pivot_wider(
+    names_from = clust,
+    values_from = poblacion_65_mas,
+    names_prefix = "cluster_"
+  ) |>
+  mutate(
+    orden_esperado = cluster_1 < cluster_2
+  ) |>
+  arrange(anio)
+
+print(control_perfiles)
+
+# Verificar que el cluster 1 sea el menos envejecido
+# y el cluster 2 el más envejecido en todos los períodos
+stopifnot(all(control_perfiles$orden_esperado))
+
+# Exportación de resultados del clustering demográfico
+
+# 1. Calidad de las soluciones de clustering
+calidad_clusters <- bind_rows(
+  silhouette_1980 |> mutate(anio = 1980),
+  silhouette_1995 |> mutate(anio = 1995),
+  silhouette_2010 |> mutate(anio = 2010),
+  silhouette_2024 |> mutate(anio = 2024)
+) |>
+  select(anio, k, silhouette_promedio, grupo_mas_chico) |>
+  arrange(anio, k)
+
+write_csv(
+  calidad_clusters,
+  "output/tablas/calidad_clusters_demograficos.csv"
+)
+
+
+# 2. Características demográficas de los clusters
+caracterizacion_clusters <- bind_rows(
+  caracterizacion_1980 |> mutate(anio = 1980),
+  caracterizacion_1995 |> mutate(anio = 1995),
+  caracterizacion_2010 |> mutate(anio = 2010),
+  caracterizacion_2024 |> mutate(anio = 2024)
+) |>
+  select(anio, everything()) |>
+  arrange(anio, clust)
+
+write_csv(
+  caracterizacion_clusters,
+  "output/tablas/caracterizacion_clusters_demograficos.csv"
+)
+
+
+# 3. Asignación de cada país a un cluster
+perfiles_paises <- bind_rows(
+  datos_1980_cluster,
+  datos_1995_cluster,
+  datos_2010_cluster,
+  datos_2024_cluster
+) |>
+  select(
+    codigo_pais,
+    pais,
+    anio,
+    clust,
+    all_of(vars_demograficas)
+  ) |>
+  arrange(codigo_pais, anio)
+
+# Comprobar que haya una fila por país y año
+stopifnot(
+  nrow(perfiles_paises) == 194 * 4,
+  !anyDuplicated(perfiles_paises[c("codigo_pais", "anio")])
+)
+
+write_csv(
+  perfiles_paises,
+  "output/tablas/perfiles_paises_demograficos.csv"
+)
+
+
+# 4. Varianza explicada por los componentes principales
+varianza_pca <- bind_rows(
+  as.data.frame(pca_1980$eig) |>
+    rownames_to_column("componente") |>
+    mutate(anio = 1980),
+  
+  as.data.frame(pca_1995$eig) |>
+    rownames_to_column("componente") |>
+    mutate(anio = 1995),
+  
+  as.data.frame(pca_2010$eig) |>
+    rownames_to_column("componente") |>
+    mutate(anio = 2010),
+  
+  as.data.frame(pca_2024$eig) |>
+    rownames_to_column("componente") |>
+    mutate(anio = 2024)
+) |>
+  select(anio, everything()) |>
+  arrange(anio, componente)
+
+write_csv(
+  varianza_pca,
+  "output/tablas/varianza_pca_demografico.csv"
+)
+
+
+# 5. Verificar que los archivos se hayan guardado
+archivos_clustering <- c(
+  "output/tablas/calidad_clusters_demograficos.csv",
+  "output/tablas/caracterizacion_clusters_demograficos.csv",
+  "output/tablas/perfiles_paises_demograficos.csv",
+  "output/tablas/varianza_pca_demografico.csv"
+)
+
+print(file.exists(archivos_clustering))
 
 # Análisis de outliers ####
 
-# Utilizando el método IQR
+# Leer los outliers detectados en outliers_y_na.R
+ruta_outliers <- "output/tablas/outliers_horizontales_wdi.csv"
 
-outliers_cluster_demografico <- bind_rows(
-  datos_1980 |> mutate(anio = 1980),
-  datos_1995 |> mutate(anio = 1995),
-  datos_2010 |> mutate(anio = 2010),
-  datos_2024 |> mutate(anio = 2024)
+# Comprobar que el diagnóstico general ya se haya ejecutado
+stopifnot(file.exists(ruta_outliers))
+
+# Seleccionar los outliers relevantes para nuestro clustering
+outliers_cluster_demografico <- read_csv(
+  ruta_outliers,
+  show_col_types = FALSE
 ) |>
-  pivot_longer(
-    cols = all_of(vars_demograficas),
-    names_to = "variable",
-    values_to = "valor"
-  ) |>
-  group_by(anio, variable) |>
-  mutate(
-    q1 = quantile(valor, 0.25),
-    q3 = quantile(valor, 0.75),
-    iqr = q3 - q1,
-    limite_inferior = q1 - 1.5 * iqr,
-    limite_superior = q3 + 1.5 * iqr
-  ) |>
   filter(
-    valor < limite_inferior |
-      valor > limite_superior
+    anio %in% anios_analisis,
+    variable %in% vars_demograficas,
+    codigo_pais %in% datos_1980$codigo_pais
   ) |>
-  ungroup() |>
   select(
-    anio,
+    codigo_pais,
     pais,
+    anio,
     variable,
     valor
   ) |>
   arrange(variable, anio, desc(valor))
 
-outliers_cluster_demografico
-
-# Qué países aparecen más de una vez como outliers?
-
+# Resumir los outliers detectados
 outliers_cluster_demografico |>
-  count(pais, sort = TRUE)
+  count(anio, variable) |>
+  print(n = Inf)
 
-# Se repiten en la misma variable? 
-
+# Identificar países con outliers en más de una observación
 outliers_cluster_demografico |>
-  count(pais, variable, sort = TRUE)
-
-# Los outliers son genuinos y en varios casos persistentes en el tiempo. Así que 
-# se conservan en el análisis.
+  count(codigo_pais, pais, sort = TRUE) |>
+  print(n = 20)
 
 # Comparaciones de los momentos ####
 
@@ -792,9 +710,8 @@ perfiles_comparados |>
 # Identificamos todos los países que aparecen como outlier
 # en al menos una variable y en al menos uno de los cuatro años
 
-
 paises_outliers_total <- outliers_cluster_demografico |>
-  distinct(pais)
+  distinct(codigo_pais)
 
 paises_outliers_total
 
@@ -816,16 +733,16 @@ resumen_exclusion_outliers
 # Excluimos esos mismos países de los cuatro períodos
 
 datos_1980_sin_outliers <- datos_1980 |>
-  anti_join(paises_outliers_total, by = "pais")
+  anti_join(paises_outliers_total, by = "codigo_pais")
 
 datos_1995_sin_outliers <- datos_1995 |>
-  anti_join(paises_outliers_total, by = "pais")
+  anti_join(paises_outliers_total, by = "codigo_pais")
 
 datos_2010_sin_outliers <- datos_2010 |>
-  anti_join(paises_outliers_total, by = "pais")
+  anti_join(paises_outliers_total, by = "codigo_pais")
 
 datos_2024_sin_outliers <- datos_2024 |>
-  anti_join(paises_outliers_total, by = "pais")
+  anti_join(paises_outliers_total, by = "codigo_pais")
 
 # Repetimos PCA
 # 1980
@@ -1061,7 +978,7 @@ grafico_silhouette <- ggplot(
 grafico_silhouette
 
 ggsave(
-  "silhouette_clusters.png",
+  "output/graficos/silhouette_clusters.png",
   plot = grafico_silhouette,
   width = 5,
   height = 3,
@@ -1150,7 +1067,7 @@ grafico_correlaciones <- ggplot(
 grafico_correlaciones
 
 ggsave(
-  "correlaciones_2024.png",
+  "output/graficos/correlaciones_2024.png",
   plot = grafico_correlaciones,
   width = 4.5,
   height = 4,
@@ -1201,7 +1118,7 @@ tabla_trayectorias
 
 gtsave(
   tabla_trayectorias,
-  "tabla_trayectorias.png",
+  "output/tablas/tabla_trayectorias.png",
   zoom = 2
 )
 
@@ -1249,7 +1166,7 @@ tabla_perfiles
 
 gtsave(
   tabla_perfiles,
-  "tabla_perfiles_demograficos.png",
+  "output/tablas/tabla_perfiles_demograficos.png",
   zoom = 2
 )
 
@@ -1303,7 +1220,7 @@ grafico_evolucion_clusters <- ggplot(
 grafico_evolucion_clusters
 
 ggsave(
-  "evolucion_clusters.png",
+  "output/graficos/evolucion_clusters.png",
   plot = grafico_evolucion_clusters,
   width = 5,
   height = 3.3,
@@ -1412,7 +1329,7 @@ tabla_silhouette_clusters
 
 gtsave(
   tabla_silhouette_clusters,
-  "silhouette_por_cluster.png",
+  "output/graficos/silhouette_por_cluster.png",
   zoom = 2
 )
 
