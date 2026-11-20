@@ -2,7 +2,7 @@
 # Análisis de NA y Outliers
 # ==============================================================================
 
-wdi_limpia <- read_csv("repo_wdi/wdi_limpia.csv")
+wdi_limpia <- read_csv("input/wdi_limpia.csv")
 
 # Outliers ####
 
