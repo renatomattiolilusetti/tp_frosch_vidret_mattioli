@@ -1,8 +1,9 @@
 # ==============================================================================
-# Para el conocimiento general de la base 
+# Análisis exploratorio de la base WDI
 # ==============================================================================
+library(tidyverse)
 
-wdi_limpia <- read_csv("repo_wdi/wdi_limpia.csv")
+wdi_limpia <- read_csv("input/wdi_limpia.csv")
 
 # Contamos dimension
 dim(wdi_limpia)  
@@ -21,11 +22,18 @@ wdi_limpia |>
     cantidad_anios = n_distinct(anio)
   )
 
-# Contamos columnas (como las variables que precisamos para las pirámides explican lo mismo pero en diferentes rangos,
-# nos quedamos solo con 2, por eso sumamos despues del ncol())
-wdi_limpia |>
-  select(-(35:68), -(1:4)) |>
-  ncol() + 2 
+# Contar los indicadores, considerando las variables
+# de pirámides poblacionales como dos grupos
+cantidad_variables <- wdi_limpia |>
+  select(
+    -pais, -codigo_pais, -region, -anio, -ingreso,
+    -poblacion_mill,
+    -starts_with("mujeres_"),
+    -starts_with("varones_")
+  ) |>
+  ncol() + 2
+
+print(cantidad_variables) 
 
 
 ################################################################################
@@ -50,12 +58,15 @@ faltantes_variables <- tibble(
   )
 
 # Para hacer la tabla_na_region (contamos solo esas columnas porque las otras arrojaban NA=0)
-variables_analisis <- names(wdi_limpia)[1:34]
-
-variables_analisis <- setdiff(
-  variables_analisis,
-  "region"
-)
+variables_analisis <- wdi_limpia |>
+  select(
+    where(is.numeric),
+    -anio,
+    -poblacion_mill,
+    -starts_with("mujeres_"),
+    -starts_with("varones_")
+  ) |>
+  names()
 
 tabla_na_region <- wdi_limpia |>
   group_by(region) |>
@@ -250,8 +261,16 @@ grafico_mapas_na <- ggplot(
 print(grafico_mapas_na)
 
 # Guardar una sola imagen horizontal 16:9 en Descargas
+# Crear carpeta de resultados gráficos
+dir.create(
+  "output/graficos",
+  recursive = TRUE,
+  showWarnings = FALSE
+)
+
+# Guardar el mapa de calor
 ggsave(
-  filename = path.expand("~/Downloads/mapas_na_todas_las_regiones.png"),
+  filename = "output/graficos/mapas_na_todas_las_regiones.png",
   plot = grafico_mapas_na,
   width = 16,
   height = 9,

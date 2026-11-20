@@ -1,6 +1,17 @@
-################################################################################
-#### Regresión lineal en tres momentos #########################################
-wdi_limpia <- read_csv("repo_wdi/wdi_limpia.csv")
+# ==============================================================================
+# 03.01 - Regresiones lineales: 2000, 2010 y 2019
+# ==============================================================================
+
+# Paquetes necesarios
+library(tidyverse)
+library(mice)
+library(lattice)
+
+# Leer la base limpia
+wdi_limpia <- read_csv(
+  "input/wdi_limpia.csv",
+  show_col_types = FALSE
+)
 
 #### Tratemiento de outliers ###################################################
 
@@ -149,7 +160,10 @@ diagnosticar_outliers <- function(anio_objetivo) {
     semi_join(casos_prioritarios, by = c("codigo_pais", "variable"))
   
   grafico <- if (nrow(trayectorias_prioritarias) > 0) {
-    ggplot(trayectorias_prioritarias, aes(x = anio, y = valor)) +
+    ggplot(
+      trayectorias_prioritarias |> filter(is.finite(valor)),
+      aes(x = anio, y = valor)
+    ) +
       geom_line() +
       geom_point() +
       geom_vline(xintercept = anio_objetivo, linetype = "dashed") +
@@ -468,7 +482,7 @@ modelo_mice_hc1_2000 <- with(
 # Combinar los resultados con las reglas de Rubin
 resultado_mice_hc1_2000 <- mice::pool(
   modelo_mice_hc1_2000,
-  dfcom = 182
+  dfcom = df.residual(modelo_mice_poblacion_2000$analyses[[1]])
 )
 
 # Mostrar resultados
@@ -695,7 +709,7 @@ modelo_mice_hc1_2010 <- with(
 # Combinar resultados mediante las reglas de Rubin
 resultado_mice_hc1_2010 <- mice::pool(
   modelo_mice_hc1_2010,
-  dfcom = 182
+  dfcom = df.residual(modelo_mice_poblacion_2010$analyses[[1]])
 )
 
 # Mostrar resultados combinados
@@ -915,7 +929,7 @@ modelo_mice_hc1_2019 <- with(
 # Combinar los resultados mediante las reglas de Rubin
 resultado_mice_hc1_2019 <- mice::pool(
   modelo_mice_hc1_2019,
-  dfcom = 182
+  dfcom = df.residual(modelo_mice_poblacion_2019$analyses[[1]])
 )
 
 # Mostrar los resultados robustos combinados
@@ -1405,3 +1419,106 @@ comparacion_modelos <- tibble(
 
 # Mostrar los resultados
 print(comparacion_modelos, n = Inf)
+
+# ==============================================================================
+# Guardar resultados de las regresiones
+# ==============================================================================
+
+# Crear las carpetas de resultados
+dir.create("output/tablas", recursive = TRUE, showWarnings = FALSE)
+dir.create("output/graficos", recursive = TRUE, showWarnings = FALSE)
+
+
+# 1. Comparación de los nueve modelos MCO
+write_csv(
+  comparacion_modelos,
+  "output/tablas/comparacion_modelos.csv"
+)
+
+
+# 2. Coeficientes y errores estándar robustos HC1
+# Reunimos los resultados de los nueve modelos en una sola tabla
+
+coeficientes_hc1 <- purrr::imap_dfr(
+  resultados_hc1,
+  function(tabla, nombre_modelo) {
+    tibble(
+      modelo = nombre_modelo,
+      variable = rownames(tabla),
+      coeficiente = as.numeric(tabla[, 1]),
+      error_estandar_hc1 = as.numeric(tabla[, 2]),
+      p_valor = as.numeric(tabla[, 4])
+    )
+  }
+)
+
+write_csv(
+  coeficientes_hc1,
+  "output/tablas/coeficientes_modelos_hc1.csv"
+)
+
+
+# 3. Resultados MICE con errores robustos
+tabla_mice_hc1 <- bind_rows(
+  summary(resultado_mice_hc1_2000, conf.int = TRUE) |>
+    mutate(anio = 2000),
+  
+  summary(resultado_mice_hc1_2010, conf.int = TRUE) |>
+    mutate(anio = 2010),
+  
+  summary(resultado_mice_hc1_2019, conf.int = TRUE) |>
+    mutate(anio = 2019)
+) |>
+  relocate(anio)
+
+write_csv(
+  tabla_mice_hc1,
+  "output/tablas/regresiones_mice_hc1.csv"
+)
+
+
+# 4. Pruebas de Breusch-Pagan
+tabla_breusch_pagan <- tibble(
+  anio = c(2000, 2010, 2019),
+  estadistico = c(
+    unname(bp_2000$statistic),
+    unname(bp_2010$statistic),
+    unname(bp_2019$statistic)
+  ),
+  p_valor = c(
+    bp_2000$p.value,
+    bp_2010$p.value,
+    bp_2019$p.value
+  )
+)
+
+write_csv(
+  tabla_breusch_pagan,
+  "output/tablas/test_breusch_pagan.csv"
+)
+
+
+# 5. Sensibilidad del tratamiento de República Centroafricana
+write_csv(
+  tabla_sensibilidad_caf_hc1,
+  "output/tablas/sensibilidad_caf_2019.csv"
+)
+
+
+# 6. Diagnóstico de outliers de las regresiones
+write_csv(
+  resumen_outliers,
+  "output/tablas/outliers_regresiones.csv"
+)
+
+
+# 7. Gráfico de correlaciones entre regresores
+ggsave(
+  filename = "output/graficos/correlaciones_regresores_2019.png",
+  plot = grafico_correlaciones_2019,
+  width = 10,
+  height = 7,
+  units = "in",
+  dpi = 300,
+  bg = "white"
+)
