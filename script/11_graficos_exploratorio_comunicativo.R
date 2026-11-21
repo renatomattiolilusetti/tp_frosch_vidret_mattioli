@@ -1,35 +1,6 @@
 # ==============================================================================
 # Visualizaciones: gráfico exploratorio y comunicativo
 # ==============================================================================
-<<<<<<< HEAD
-
-# 1. Preparación del análisis ####
-
-# Cargar paquetes
-library(tidyverse)
-library(FactoMineR)
-library(ggrepel)
-library(scales)
-library(sf)
-library(rnaturalearth)
-library(ggtext)
-library(patchwork)
-
-<<<<<<< HEAD:script/05_graficos_entrega3.R
-# ------------------------------------------------------------------------------
-# 2. Ejemplo de uso (poner DESPUÉS DE CADA GRÁFICO que vayas creando)
-# ------------------------------------------------------------------------------
-# Supongamos que creaste un objeto llamado `mi_grafico`:
-# guardar_grafico_output(mi_grafico, "nombre_del_grafico.jpg", ancho_cm = 24, alto_cm = 15)
-#
-# Si no le pasás un objeto `grafico`, toma el último gráfico dibujado con `last_plot()`:
-# guardar_grafico_output(last_plot(), "ultimo_grafico.jpg")
-=======
-# Crear la carpeta de resultados si no existe
-dir.create("output/graficos", recursive = TRUE, showWarnings = FALSE)
->>>>>>> 197f35e5d3936f25007ea6a8447baf181474ff7a:script/11_graficos_exploratorio_comunicativo.R
-
-=======
 
 # 1. Preparación del análisis ####
 
@@ -50,7 +21,6 @@ source("utils/crear_mapa.R")
 # Crear la carpeta de resultados si no existe
 dir.create("output/graficos", recursive = TRUE, showWarnings = FALSE)
 
->>>>>>> 197f35e5d3936f25007ea6a8447baf181474ff7a
 # Variables y períodos utilizados en los gráficos
 anios_analisis <- c(1980, 1995, 2010, 2024)
 vars_demograficas <- c("poblacion_65_mas", "fecundidad", "esperanza_vida",
