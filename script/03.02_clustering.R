@@ -2,35 +2,58 @@
 # Clustering demográficos
 # ==============================================================================
 
-# ==============================================================================
-# 03.02 - Clustering demográfico
-# ==============================================================================
-# Objetivo: identificar perfiles demográficos en 1980, 1995, 2010 y 2024,
-# y estudiar cómo cambian los países entre esos perfiles.
-# ==============================================================================
+# 1. Preparación del análisis
 
-# 1. Cargar paquetes
+# Cargar los paquetes
 library(tidyverse)
 library(cluster)
 library(FactoMineR)
 library(gt)
 
-# 2. Fijar semilla para reproducibilidad
+# Fijar semilla para reproducibilidad
 set.seed(42)
 
-# 3. Leer la base limpia
+# Crear carpetas de resultados si no existen
+dir.create("output/tablas", recursive = TRUE, showWarnings = FALSE)
+dir.create("output/graficos", recursive = TRUE, showWarnings = FALSE)
+dir.create("auxiliar", recursive = TRUE, showWarnings = FALSE)
+
+# Verificar que existan los archivos necesarios
+archivos_necesarios <- c(
+  "input/wdi_limpia.csv",
+  "output/tablas/outliers_horizontales_wdi.csv",
+  "utils/pca_demografico.R",
+  "utils/evaluar_clusters_demograficos.R",
+  "utils/clustering_demografico.R"
+)
+
+archivos_faltantes <- archivos_necesarios[
+  !file.exists(archivos_necesarios)
+]
+
+if (length(archivos_faltantes) > 0) {
+  stop(
+    "Faltan archivos necesarios: ",
+    paste(archivos_faltantes, collapse = ", ")
+  )
+}
+
+# Leer la base limpia
 wdi_limpia <- read_csv(
   "input/wdi_limpia.csv",
   show_col_types = FALSE
 )
 
-# 4. Verificar que haya una observación por país y año
+# Verificar identificadores y duplicados
 stopifnot(
+  !anyNA(wdi_limpia$codigo_pais),
+  !anyNA(wdi_limpia$anio),
   !anyDuplicated(wdi_limpia[c("codigo_pais", "anio")])
 )
 
-# 5. Mostrar las dimensiones
+# Mostrar las dimensiones
 print(dim(wdi_limpia))
+
 
 # Buscamos identificar qué perfiles demográficos existen en distintos momentos 
 # del tiempo y observar si los países cambian entre esos perfiles. 
@@ -486,10 +509,19 @@ perfiles_paises <- bind_rows(
   ) |>
   arrange(codigo_pais, anio)
 
-# Comprobar que haya una fila por país y año
+
+# Comprobar que haya una observación por país y año
+# y que estén presentes todos los países en los cuatro períodos
+
 stopifnot(
-  nrow(perfiles_paises) == 194 * 4,
-  !anyDuplicated(perfiles_paises[c("codigo_pais", "anio")])
+  nrow(perfiles_paises) ==
+    nrow(datos_1980) * length(anios_analisis),
+  
+  !anyDuplicated(
+    perfiles_paises[c("codigo_pais", "anio")]
+  ),
+  
+  !anyNA(perfiles_paises$clust)
 )
 
 write_csv(
@@ -575,7 +607,6 @@ outliers_cluster_demografico |>
 # Comparaciones de los momentos ####
 
 # Primero, los clusters mantienen el mismo significado a lo largo del tiempo?
-
 perfiles_comparados <- bind_rows(
   datos_1980_cluster |>
     mutate(anio = 1980),
@@ -600,12 +631,12 @@ perfiles_comparados <- bind_rows(
   ) |>
   arrange(anio, clust)
 
-perfiles_comparados
+print(perfiles_comparados)
 
 # Vemos que sí, se mantienen las caracteristicas de los grupos
+
 # Ahora formamos trayectoria_paises, agregando el grupo a cada país, para ver 
 # cuándo cambiaron. 
-
 trayectorias_paises <- perfiles_1980 |>
   rename(cluster_1980 = clust) |>
   left_join(
@@ -624,8 +655,41 @@ trayectorias_paises <- perfiles_1980 |>
     by = "pais"
   )
 
-# Contamos cuántos siguieron cada trayectoria
+# Exportar datos para los gráficos posteriores
 
+# Verificar que cada país tenga una trayectoria completa
+stopifnot(
+  nrow(trayectorias_paises) == nrow(datos_1980),
+  !anyDuplicated(trayectorias_paises$pais),
+  !anyNA(trayectorias_paises)
+)
+
+# Guardar las trayectorias de los países
+write_csv(
+  trayectorias_paises,
+  "output/tablas/trayectorias_paises_demograficos.csv"
+)
+
+# Guardar la base utilizada en los cuatro cortes temporales
+# para reutilizarla sin repetir la selección de países
+base_cluster_cortes <- base_cluster_demografico |>
+  filter(anio %in% anios_analisis)
+
+write_csv(
+  base_cluster_cortes,
+  "auxiliar/base_cluster_demografico_cortes.csv"
+)
+
+# Verificar que ambos archivos se hayan guardado
+stopifnot(
+  file.exists("output/tablas/trayectorias_paises_demograficos.csv"),
+  file.exists("auxiliar/base_cluster_demografico_cortes.csv")
+)
+
+print("Archivos auxiliares del clustering guardados correctamente.")
+
+
+# Contamos cuántos siguieron cada trayectoria
 trayectorias_paises |>
   count(
     cluster_1980,
@@ -721,14 +785,22 @@ nrow(paises_outliers_total)
 
 # Cuántos países perdemos y cuántos quedan para la prueba de sensibilidad
 
+# Cantidad de países de la muestra original
+cantidad_paises_original <- nrow(datos_1980)
+
+# Resumen de la exclusión de países con outliers
 resumen_exclusion_outliers <- tibble(
-  paises_originales = 194,
+  paises_originales = cantidad_paises_original,
   paises_excluidos = nrow(paises_outliers_total),
-  paises_restantes = 194 - nrow(paises_outliers_total),
-  porcentaje_excluido = 100 * nrow(paises_outliers_total) / 194
+  paises_restantes = cantidad_paises_original -
+    nrow(paises_outliers_total),
+  porcentaje_excluido = round(
+    100 * nrow(paises_outliers_total) /
+      cantidad_paises_original, 2
+  )
 )
 
-resumen_exclusion_outliers
+print(resumen_exclusion_outliers)
 
 # Excluimos esos mismos países de los cuatro períodos
 
@@ -876,25 +948,48 @@ hcpc_2024_sin_outliers <- HCPC(
 
 # Comparación de silhouette
 
-sil_1980_sin_outliers <- silhouette(
-  as.integer(hcpc_1980_sin_outliers$data.clust$clust),
-  dist(pca_1980_sin_outliers$ind$coord[, 1:2])
+# Aseguramos que cada país tenga su cluster correctamente asignado
+calcular_silhouette <- function(hcpc, pca) {
+  
+  # Coordenadas del PCA
+  coordenadas <- pca$ind$coord[, 1:2, drop = FALSE]
+  
+  # Comprobar que ambos objetos contienen los mismos países
+  stopifnot(
+    setequal(
+      rownames(coordenadas),
+      rownames(hcpc$data.clust)
+    )
+  )
+  
+  # Ordenar los clusters según el orden del PCA
+  grupos <- as.integer(
+    hcpc$data.clust[rownames(coordenadas), "clust"]
+  )
+  
+  stopifnot(!anyNA(grupos))
+  
+  # Calcular la silhouette con las asignaciones alineadas
+  cluster::silhouette(grupos, dist(coordenadas))
+}
+
+# Aplicar el cálculo a los cuatro períodos
+sil_1980_sin_outliers <- calcular_silhouette(
+  hcpc_1980_sin_outliers, pca_1980_sin_outliers
 )
 
-sil_1995_sin_outliers <- silhouette(
-  as.integer(hcpc_1995_sin_outliers$data.clust$clust),
-  dist(pca_1995_sin_outliers$ind$coord[, 1:2])
+sil_1995_sin_outliers <- calcular_silhouette(
+  hcpc_1995_sin_outliers, pca_1995_sin_outliers
 )
 
-sil_2010_sin_outliers <- silhouette(
-  as.integer(hcpc_2010_sin_outliers$data.clust$clust),
-  dist(pca_2010_sin_outliers$ind$coord[, 1:2])
+sil_2010_sin_outliers <- calcular_silhouette(
+  hcpc_2010_sin_outliers, pca_2010_sin_outliers
 )
 
-sil_2024_sin_outliers <- silhouette(
-  as.integer(hcpc_2024_sin_outliers$data.clust$clust),
-  dist(pca_2024_sin_outliers$ind$coord[, 1:2])
+sil_2024_sin_outliers <- calcular_silhouette(
+  hcpc_2024_sin_outliers, pca_2024_sin_outliers
 )
+
 
 sensibilidad_cluster_outliers <- tibble(
   anio = c(1980, 1995, 2010, 2024),
@@ -914,7 +1009,7 @@ sensibilidad_cluster_outliers <- tibble(
   )
 )
 
-sensibilidad_cluster_outliers
+print(sensibilidad_cluster_outliers)
 
 # Silhouette no cambia demasiado al sacar los países que tuvieron algún outlier.
 # No hay evidencia de que los outliers estén afectando artificialmente los dos grupos.
@@ -929,20 +1024,25 @@ outliers_cluster_demografico |>
 
 # Gráficos para PPT ####
 
+
 # Silhouette media de la solución k = 2 por año
+# Utilizamos los resultados calculados anteriormente
 
 silhouette_resumen <- tibble(
   anio = factor(
-    c("1980", "1995", "2010", "2024"),
-    levels = c("1980", "1995", "2010", "2024")
+    anios_analisis,
+    levels = anios_analisis
   ),
   silhouette_media = c(
-    0.552,
-    0.488,
-    0.498,
-    0.507
+    mean(sil_1980[, "sil_width"]),
+    mean(sil_1995[, "sil_width"]),
+    mean(sil_2010[, "sil_width"]),
+    mean(sil_2024[, "sil_width"])
   )
 )
+
+print(silhouette_resumen)
+
 
 grafico_silhouette <- ggplot(
   silhouette_resumen,
@@ -1007,7 +1107,7 @@ cor_2024 <- datos_2024 |>
       esperanza_vida = "Esperanza de vida",
       crecimiento_poblacional = "Crecimiento"
     ),
-    vvariable_1 = dplyr::recode(
+    variable_2 = dplyr::recode(
       variable_2,
       poblacion_65_mas = "Población 65+",
       fecundidad = "Fecundidad",
@@ -1332,4 +1432,29 @@ gtsave(
   "output/graficos/silhouette_por_cluster.png",
   zoom = 2
 )
+
+
+# ==============================================================================
+# Control final de archivos generados
+# ==============================================================================
+
+archivos_generados <- c(
+  "output/tablas/calidad_clusters_demograficos.csv",
+  "output/tablas/caracterizacion_clusters_demograficos.csv",
+  "output/tablas/perfiles_paises_demograficos.csv",
+  "output/tablas/varianza_pca_demografico.csv",
+  "output/tablas/trayectorias_paises_demograficos.csv",
+  "output/tablas/tabla_trayectorias.png",
+  "output/tablas/tabla_perfiles_demograficos.png",
+  "output/graficos/silhouette_clusters.png",
+  "output/graficos/correlaciones_2024.png",
+  "output/graficos/evolucion_clusters.png",
+  "output/graficos/silhouette_por_cluster.png",
+  "auxiliar/perfiles_clusters_1980_2024.csv",
+  "auxiliar/base_cluster_demografico_cortes.csv"
+)
+
+stopifnot(all(file.exists(archivos_generados)))
+
+print("03.02 finalizado: todos los archivos fueron generados.")
 

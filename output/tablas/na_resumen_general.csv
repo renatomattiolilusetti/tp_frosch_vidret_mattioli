@@ -1,0 +1,13 @@
+variable,cantidad_na,total_observaciones,porcentaje_na
+gasto_publico_salud_pib,8323,12870,64.67
+gasto_salud_pib,8308,12870,64.55
+gasto_bolsillo_salud,8308,12870,64.55
+indice_cobertura_salud,8238,12870,64.01
+pib_per_capita_ppa,6222,12870,48.34
+esperanza_vida,229,12870,1.78
+fecundidad,227,12870,1.76
+crecimiento_poblacional,227,12870,1.76
+poblacion_total,30,12870,0.23
+dependencia_mayor,30,12870,0.23
+poblacion_65_mas,0,12870,0
+migracion_neta,0,12870,0
