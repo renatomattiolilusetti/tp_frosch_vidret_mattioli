@@ -418,24 +418,7 @@ diagnostico_vertical |>
 
 # Miramos casos particulares de cada tipo de alerta.
 # La función evita repetir el mismo procedimiento para las tres categorías.
-mostrar_trayectoria <- function(caso) {
-  
-  if (nrow(caso) == 0) {
-    message("No hay candidatos en esta categoría.")
-    return(invisible(NULL))
-  }
-  
-  datos_horizontal |>
-    filter(
-      codigo_pais == caso$codigo_pais[[1]],
-      variable == caso$variable[[1]],
-      anio >= caso$anio_candidato[[1]] - 5,
-      anio <= caso$anio_candidato[[1]] + 5
-    ) |>
-    select(pais, variable, anio, valor) |>
-    arrange(anio) |>
-    print(n = Inf)
-}
+source("utils/mostrar_trayectoria.R")
 
 # Caso con alerta fuerte
 caso_zoom <- diagnostico_vertical |>
@@ -443,7 +426,7 @@ caso_zoom <- diagnostico_vertical |>
   slice_max(z_robusto, n = 1, with_ties = FALSE)
 
 print(caso_zoom)
-mostrar_trayectoria(caso_zoom)
+mostrar_trayectoria(caso_zoom, datos_horizontal)
 
 # Caso que solo está fuera del rango de los años vecinos
 caso_fuera_rango <- diagnostico_vertical |>
@@ -451,7 +434,7 @@ caso_fuera_rango <- diagnostico_vertical |>
   slice_max(z_robusto, n = 1, with_ties = FALSE)
 
 print(caso_fuera_rango)
-mostrar_trayectoria(caso_fuera_rango)
+mostrar_trayectoria(caso_fuera_rango, datos_horizontal)
 
 # Caso que solo supera 3 MAD
 caso_mad <- diagnostico_vertical |>
@@ -459,7 +442,7 @@ caso_mad <- diagnostico_vertical |>
   slice_max(z_robusto, n = 1, with_ties = FALSE)
 
 print(caso_mad)
-mostrar_trayectoria(caso_mad)
+mostrar_trayectoria(caso_mad, datos_horizontal)
 
 # Formamos tabla: reutilizamos las etiquetas definidas al inicio
 variables_tabla <- unname(etiquetas_variables[variables_horizontal])
@@ -559,7 +542,7 @@ gt::gtsave(
 
 # Análisis NA ####
 
-# Los mapas de calor por región y década están en 03_analisis_exploratorio.R.
+# Los mapas de calor por región y década están en 03_analisis_descriptivo.R.
 # Aquí conservamos el seguimiento anual y el test del mecanismo de faltantes.
 
 # Diagnóstico de NA ####
@@ -685,7 +668,7 @@ write_csv(
   "output/tablas/test_little.csv"
 )
 
-# El resumen general de NA ya se guarda en 03_analisis_exploratorio.R.
+# El resumen general de NA ya se guarda en 03_analisis_descriptivo.R.
 
 # Exportación de resultados
 

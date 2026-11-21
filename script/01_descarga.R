@@ -2,7 +2,7 @@
 # Descarga
 # ==============================================================================
 
-# install.packages(c("tidyverse", "skimr", "readr", "mice", "naniar", "WDI", "car","lmtest", "sandwich","gt","webshot2", "ggrepel", "FactoMineR", "sf", "rnaturalearth", "rnaturalearthdata", "ggtext", "patchwork"))
+# install.packages(c("tidyverse", "skimr", "readr", "mice", "naniar", "WDI", "car","lmtest", "sandwich","gt","webshot2", "ggrepel", "FactoMineR", "sf", "rnaturalearth", "rnaturalearthdata", "ggtext", "patchwork", "zoo", "factoextra"))
 
 library(tidyverse)
 library(WDI)
@@ -95,6 +95,7 @@ if (length(variables_faltantes) > 0) {
 }
 
 # Guardar la base original
+dir.create("raw", recursive = TRUE, showWarnings = FALSE)
 write_csv(wdi_raw, "raw/wdi_raw.csv")
 
 # Comprobar las dimensiones de la descarga

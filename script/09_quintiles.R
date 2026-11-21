@@ -6,23 +6,9 @@
 library(tidyverse)
 library(scales)
 
-# Función estandarizada para exportar los gráficos 
-dir.create("output/graficos", recursive = TRUE, showWarnings = FALSE)
-
-guardar_grafico <- function(plot, nombre_archivo, ancho = 10, alto = 6.5) {
-  ruta <- file.path("output/graficos", nombre_archivo)
-  ggsave(
-    filename = ruta,
-    plot = plot,
-    width = ancho,
-    height = alto,
-    units = "in",
-    dpi = 300,
-    device = "jpeg",
-    quality = 95
-  )
-  message("Gráfico guardado en: ", ruta)
-}
+# Funciones propias: exportar los gráficos y tema base
+source("utils/guardar_grafico.R")
+source("utils/tema_estandar.R")
 
 # Paleta Okabe-Ito para los 5 quintiles (de menor a mayor carga demográfica)
 paleta_quintiles <- c(
@@ -32,26 +18,6 @@ paleta_quintiles <- c(
   "Q4 (Media-Alta)" = "#E69F00",
   "Q5 (Alta)"       = "#D55E00"
 )
-
-# Tema base estandarizado (sans-serif, jerarquía visual clara)
-tema_estandar <- function(base_size = 11) {
-  theme_minimal(base_size = base_size, base_family = "sans") +
-    theme(
-      plot.title = element_text(face = "bold", size = rel(1.25), color = "#111111", margin = margin(b = 4)),
-      plot.subtitle = element_text(size = rel(0.95), color = "#444444", margin = margin(b = 12)),
-      plot.caption = element_text(size = rel(0.8), color = "#666666", hjust = 0, margin = margin(t = 10)),
-      axis.title = element_text(face = "bold", size = rel(0.95), color = "#222222"),
-      axis.title.x = element_text(margin = margin(t = 8)),
-      axis.title.y = element_text(margin = margin(r = 8)),
-      axis.text = element_text(size = rel(0.9), color = "#222222"),
-      axis.text.x = element_text(face = "bold"),
-      panel.grid.minor = element_blank(),
-      panel.grid.major.x = element_blank(),
-      panel.grid.major.y = element_line(color = "#E5E5E5", linewidth = 0.5),
-      legend.position = "none",
-      plot.margin = margin(14, 16, 12, 14)
-    )
-}
 
 # Cargamos la base de datos 
 wdi_limpia <- read_csv("input/wdi_limpia.csv", show_col_types = FALSE)
@@ -264,24 +230,6 @@ paises_agrupados_pib <- df_quintiles_con_pib %>%
 
 # Gráfico de barras (gasto en salud por quintil de dependencia mayor para 2019)
 
-# Función estandarizada de exportación (300 dpi en output/graficos/)
-dir.create("output/graficos", recursive = TRUE, showWarnings = FALSE)
-
-guardar_grafico <- function(plot, nombre_archivo, ancho = 10, alto = 6.5) {
-  ruta <- file.path("output/graficos", nombre_archivo)
-  ggsave(
-    filename = ruta,
-    plot = plot,
-    width = ancho,
-    height = alto,
-    units = "in",
-    dpi = 300,
-    device = "jpeg",
-    quality = 95
-  )
-  message("Gráfico guardado en: ", ruta)
-}
-
 # Colores originales del gráfico de referencia
 colores_barras_quintiles <- c(
   "Q1 (Baja)"       = "#2b5c8f",
@@ -360,25 +308,3 @@ grafico_barras <- ggplot() +
 
 print(grafico_barras)
 guardar_grafico(grafico_barras, "quintiles_dm_gasto_salud_barras_2019.jpg", ancho = 10, alto = 6.5)
-
-# Guardar gráficos ####
-
-# Para guardar los gráficos
-guardar_grafico <- function(plot, nombre_archivo, ancho = 10, alto = 6.5) {
-  dir.create("output/graficos", recursive = TRUE, showWarnings = FALSE)
-  ruta <- file.path("output/graficos", nombre_archivo)
-  ggsave(
-    filename = ruta,
-    plot = plot,
-    width = ancho,
-    height = alto,
-    units = "in",
-    dpi = 300,
-    device = "jpeg",
-    quality = 95
-  )
-  message("Gráfico guardado en: ", ruta)
-}
-
-guardar_grafico(grafico_barras, "quintiles_dm_gasto_salud_barras_2019.jpg", ancho = 10, alto = 6.5)
-guardar_grafico(grafico_boxplot, "quintiles_dm_gasto_salud_boxplot_2019.jpg", ancho = 10, alto = 6.5)

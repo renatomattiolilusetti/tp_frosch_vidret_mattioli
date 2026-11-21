@@ -24,7 +24,8 @@ archivos_necesarios <- c(
   "output/tablas/outliers_horizontales_wdi.csv",
   "utils/pca_demografico.R",
   "utils/evaluar_clusters_demograficos.R",
-  "utils/clustering_demografico.R"
+  "utils/clustering_demografico.R",
+  "utils/calcular_silhouette.R"
 )
 
 archivos_faltantes <- archivos_necesarios[
@@ -566,7 +567,7 @@ print(file.exists(archivos_clustering))
 
 # Análisis de outliers ####
 
-# Leer los outliers detectados en outliers_y_na.R
+# Leer los outliers detectados en 04_analisis_outliers_y_na.R
 ruta_outliers <- "output/tablas/outliers_horizontales_wdi.csv"
 
 # Comprobar que el diagnóstico general ya se haya ejecutado
@@ -939,30 +940,9 @@ hcpc_2024_sin_outliers <- HCPC(
 
 # Comparación de silhouette
 
-# Aseguramos que cada país tenga su cluster correctamente asignado
-calcular_silhouette <- function(hcpc, pca) {
-  
-  # Coordenadas del PCA
-  coordenadas <- pca$ind$coord[, 1:2, drop = FALSE]
-  
-  # Comprobar que ambos objetos contienen los mismos países
-  stopifnot(
-    setequal(
-      rownames(coordenadas),
-      rownames(hcpc$data.clust)
-    )
-  )
-  
-  # Ordenar los clusters según el orden del PCA
-  grupos <- as.integer(
-    hcpc$data.clust[rownames(coordenadas), "clust"]
-  )
-  
-  stopifnot(!anyNA(grupos))
-  
-  # Calcular la silhouette con las asignaciones alineadas
-  cluster::silhouette(grupos, dist(coordenadas))
-}
+# Cargamos la función que calcula la silhouette asegurando que cada país
+# tenga su cluster correctamente asignado
+source("utils/calcular_silhouette.R")
 
 # Aplicar el cálculo a los cuatro períodos
 sil_1980_sin_outliers <- calcular_silhouette(
@@ -1212,15 +1192,15 @@ gtsave(
 
 # Tabla perfiles comparados 
 tabla_perfiles <- perfiles_comparados |>
-rename(
-  `Año` = anio,
-  `Cluster` = clust,
-  `Países` = n,
-  `Población 65+ (%)` = poblacion_65_mas,
-  `Fecundidad` = fecundidad,
-  `Esperanza de vida` = esperanza_vida,
-  `Crecimiento (%)` = crecimiento_poblacional
-) |>
+  rename(
+    `Año` = anio,
+    `Cluster` = clust,
+    `Países` = n,
+    `Población 65+ (%)` = poblacion_65_mas,
+    `Fecundidad` = fecundidad,
+    `Esperanza de vida` = esperanza_vida,
+    `Crecimiento (%)` = crecimiento_poblacional
+  ) |>
   gt() |>
   fmt_number(
     columns = c(
@@ -1414,7 +1394,7 @@ tabla_silhouette_clusters
 
 gtsave(
   tabla_silhouette_clusters,
-  "output/graficos/silhouette_por_cluster.png",
+  "output/tablas/tabla_silhouette_por_cluster.png",
   zoom = 2
 )
 
@@ -1434,12 +1414,11 @@ archivos_generados <- c(
   "output/graficos/silhouette_clusters.png",
   "output/graficos/correlaciones_2024.png",
   "output/graficos/evolucion_clusters.png",
-  "output/graficos/silhouette_por_cluster.png",
+  "output/tablas/tabla_silhouette_por_cluster.png",
   "output/tablas/perfiles_clusters_1980_2024.csv",
   "auxiliar/base_cluster_demografico_cortes.csv"
 )
 
 stopifnot(all(file.exists(archivos_generados)))
 
-print("03.02 finalizado: todos los archivos fueron generados.")
-
+print("07 finalizado: todos los archivos fueron generados.")

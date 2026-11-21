@@ -1,5 +1,5 @@
 # ==============================================================================
-# Análisis de capacidad de respuesta
+# Clustering de capacidad de respuesta sanitaria y económica
 # ==============================================================================
 
 # Paquetes

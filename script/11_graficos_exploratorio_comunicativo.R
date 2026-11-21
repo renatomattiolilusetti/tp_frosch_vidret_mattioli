@@ -14,6 +14,10 @@ library(rnaturalearth)
 library(ggtext)
 library(patchwork)
 
+# Funciones propias
+source("utils/clasificar_anio.R")
+source("utils/crear_mapa.R")
+
 # Crear la carpeta de resultados si no existe
 dir.create("output/graficos", recursive = TRUE, showWarnings = FALSE)
 
@@ -110,7 +114,7 @@ resumen <- puntos |>
             sd_y = sd(PC2), n = n(), .groups = "drop")
 resumen   # cuánto se corre cada grupo (x) y cuánto se dispersa en y (sd_y)
 
-# Solo buscamos entre países conocidos, con su nombre en castellano
+# Nombres en castellano de países conocidos (se usan para los extremos de cada año)
 conocidos <- c(
   ARG = "Argentina", BRA = "Brasil", MEX = "México", CHL = "Chile", COL = "Colombia",
   PER = "Perú", URY = "Uruguay", BOL = "Bolivia", CUB = "Cuba", USA = "Estados Unidos",
@@ -132,14 +136,14 @@ rotulos <- resumen |>
   select(anio, perfil, n) |>
   pivot_wider(names_from = perfil, values_from = n) |>
   mutate(rotulo = paste0(anio, "   ·   ", joven, " jóvenes, ", avanzado, " avanzados"))
-con_rotulo <- \(d) left_join(d, select(rotulos, anio, rotulo), by = "anio")
-puntos  <- con_rotulo(puntos)
-resumen <- con_rotulo(resumen)
-etiquetas <- con_rotulo(etiquetas)
+rotulos <- select(rotulos, anio, rotulo)
+puntos    <- left_join(puntos, rotulos, by = "anio")
+resumen   <- left_join(resumen, rotulos, by = "anio")
+etiquetas <- left_join(etiquetas, rotulos, by = "anio")
 
-# Rango visible: recortamos el 0,5% más extremo de cada lado en los dos ejes, para que 
-# unos pocos países no estiren el gráfico. Se informa en la nota cuántas observaciones 
-# quedan afuera.
+# Rango visible: en el eje vertical recortamos el 0,5% más extremo de cada lado,
+# para que unos pocos países no estiren el gráfico. En la nota se informa cuántas
+# observaciones quedan afuera.
 
 # Eje x: se muestran todos los países y se deja aire a los dos costados, para
 # que se vea cómo las nubes se corren hacia la derecha.
@@ -456,56 +460,9 @@ message("Países comparables para ambos años: ", n_comparables)
 
 # 3.2. PCA y clasificación demográfica por período
 
-clasificar_anio <- function(anio_elegido) {
-  
-  datos <- base_mapas |>
-    filter(anio == anio_elegido)
-  
-  matriz <- datos |>
-    select(all_of(vars_demograficas)) |>
-    as.data.frame()
-  rownames(matriz) <- datos$codigo_pais
-  
-  pca <- FactoMineR::PCA(
-    matriz, scale.unit = TRUE, ncp = 2, graph = FALSE
-  )
-  
-  set.seed(2026)
-  hcpc <- FactoMineR::HCPC(
-    pca, nb.clust = 2, consol = TRUE, graph = FALSE
-  )
-  
-  grupos <- hcpc$data.clust |>
-    as.data.frame() |>
-    tibble::rownames_to_column("codigo_pais") |>
-    transmute(codigo_pais, cluster = as.character(clust))
-  
-  stopifnot(anyDuplicated(grupos$codigo_pais) == 0)
-  
-  clasificados <- datos |>
-    left_join(grupos, by = "codigo_pais", relationship = "one-to-one")
-  
-  if (any(is.na(clasificados$cluster))) {
-    stop(paste("No se asignaron todos los grupos en", anio_elegido))
-  }
-  
-  # Los numeros 1 y 2 del clustering NO tienen significado demografico.
-  # Identificamos el grupo mas avanzado por su promedio de poblacion 65+.
-  grupo_avanzado <- clasificados |>
-    group_by(cluster) |>
-    summarise(media_65 = mean(poblacion_65_mas), .groups = "drop") |>
-    slice_max(media_65, n = 1, with_ties = FALSE) |>
-    pull(cluster)
-  
-  clasificados |>
-    mutate(perfil = if_else(cluster == grupo_avanzado,
-                            "Transición avanzada", "Perfil demográfico joven")) |>
-    select(anio, pais, codigo_pais, perfil)
-}
-
 perfiles <- bind_rows(
-  clasificar_anio(1980),
-  clasificar_anio(2024)
+  clasificar_anio(base_mapas, vars_demograficas, 1980),
+  clasificar_anio(base_mapas, vars_demograficas, 2024)
 )
 
 stopifnot(anyDuplicated(perfiles[c("codigo_pais", "anio")]) == 0)
@@ -623,50 +580,8 @@ color_nota   <- "#52677A"
 
 # 3.5. Construcción de los mapas de 1980 y 2024
 
-crear_mapa <- function(anio_elegido, cantidad_avanzados) {
-  
-  datos <- mapas |>
-    filter(anio == anio_elegido)
-  
-  ggplot(datos) +
-    geom_sf(
-      aes(fill = perfil_mapa),
-      color = "white", linewidth = 0.075
-    ) +
-    scale_fill_manual(
-      name = NULL,
-      values = paleta,
-      breaks = names(paleta),
-      limits = names(paleta),
-      drop = FALSE,
-      guide = guide_legend(nrow = 1)
-    ) +
-    coord_sf(crs = "+proj=robin", datum = NA, expand = FALSE) +
-    labs(
-      title = paste0(anio_elegido, "  ·  ", cantidad_avanzados,
-                     " países con perfil avanzado")
-    ) +
-    theme_void(base_size = 12) +
-    theme(
-      plot.background = element_rect(fill = "white", color = NA),
-      panel.background = element_rect(fill = "#F2F8FD", color = NA),
-      plot.title.position = "plot",
-      plot.title = element_text(
-        face = "bold", size = 14.5, color = color_titulo,
-        hjust = 0.5, margin = margin(b = 7)
-      ),
-      plot.margin = margin(t = 5, r = 0, b = 5, l = 0),
-      legend.position = "bottom",
-      legend.direction = "horizontal",
-      legend.title = element_blank(),
-      legend.text = element_text(size = 11.2, color = color_titulo),
-      legend.key.width = grid::unit(0.75, "cm"),
-      legend.key.height = grid::unit(0.36, "cm")
-    )
-}
-
-mapa_grafico_1980 <- crear_mapa(1980, n_1980)
-mapa_grafico_2024 <- crear_mapa(2024, n_2024)
+mapa_grafico_1980 <- crear_mapa(mapas, 1980, n_1980, paleta, color_titulo)
+mapa_grafico_2024 <- crear_mapa(mapas, 2024, n_2024, paleta, color_titulo)
 
 
 # 3.6. Composición del gráfico comunicativo
@@ -731,5 +646,4 @@ stopifnot(
   all(file.exists(archivos_generados))
 )
 
-print("finalizado: todos los gráficos fueron generados.")
-
+print("11 finalizado: todos los gráficos fueron generados.")

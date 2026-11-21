@@ -1,12 +1,11 @@
 # ==============================================================================
-# Gráficos correspondientes a la sección de Análisis de variables 
+# Gráficos correspondientes a la sección de análisis descriptivo 
 # ==============================================================================
 
 # Paquetes
 library(tidyverse)
 library(scales)
 library(patchwork)
-library(ggplot2)
 
 # Leemos base limpia
 wdi_limpia <- read_csv("input/wdi_limpia.csv")
@@ -158,12 +157,8 @@ print(grafico_poblacion_region)
 
 # Natalidad y mortalidad por región (1960-2025) #####
 
-# 1. Detectar columnas de poblacion, natalidad y mortalidad en wdi_limpia
-col_pob <- intersect(
-  c("poblacion_total", "poblacion", "pob_total", "SP.POP.TOTL"),
-  names(wdi_limpia)
-)[1]
-
+# 1. Detectar columnas de natalidad y mortalidad en wdi_limpia
+# (la de población ya la detectamos en el primer gráfico)
 col_nat <- intersect(
   c("tasa_natalidad", "natalidad", "tasa_bruta_natalidad", "SP.DYN.CBRT.IN"),
   names(wdi_limpia)
@@ -221,16 +216,6 @@ tasas_region <- wdi_limpia |>
       levels = c("Natalidad (%)", "Mortalidad (%)")
     )
   )
-
-orden_regiones <- c(
-  "África Subsahariana",
-  "América del Norte",
-  "América Latina y el Caribe",
-  "Asia Meridional",
-  "Asia Oriental y Pacífico",
-  "Europa y Asia Central",
-  "Oriente Medio, Norte de África, Afganistán y Pakistán"
-)
 
 datos_tasas <- tasas_region |>
   mutate(region = factor(region, levels = orden_regiones)) |>
@@ -339,12 +324,8 @@ print(grafico_natalidad_mortalidad)
 
 # Crecimiento poblacional por región, ponderado ####
 
-# 1. Detectar columnas de poblacion y crecimiento poblacional en wdi_limpia
-col_pob <- intersect(
-  c("poblacion_total", "poblacion", "pob_total", "SP.POP.TOTL"),
-  names(wdi_limpia)
-)[1]
-
+# 1. Detectar la columna de crecimiento poblacional en wdi_limpia
+# (la de población ya la detectamos en el primer gráfico)
 col_crec <- intersect(
   c("crecimiento_poblacional", "tasa_crecimiento_poblacional", "crecimiento", "SP.POP.GROW"),
   names(wdi_limpia)
@@ -378,16 +359,6 @@ crecimiento_region <- wdi_limpia |>
     crecimiento_ponderado = sum(crec * pob, na.rm = TRUE) / sum(pob, na.rm = TRUE),
     .groups = "drop"
   )
-
-orden_regiones <- c(
-  "África Subsahariana",
-  "América del Norte",
-  "América Latina y el Caribe",
-  "Asia Meridional",
-  "Asia Oriental y Pacífico",
-  "Europa y Asia Central",
-  "Oriente Medio, Norte de África, Afganistán y Pakistán"
-)
 
 paleta_regiones <- c(
   "África Subsahariana" = "#E07A67",

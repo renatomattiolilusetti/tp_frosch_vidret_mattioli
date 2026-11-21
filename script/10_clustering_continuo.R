@@ -126,7 +126,7 @@ na_demo |>
   )
 
 # Como tenemos tres décadas sin datos para las variables de crecimiento poblacional, 
-# fecundidad y esperanza de vida, exlcuimos al país del análisis (sería perder 1 país
+# fecundidad y esperanza de vida, excluimos al país del análisis (sería perder 1 país
 # de 195)
 base_demo <- base_demo |>
   filter(pais != "West Bank and Gaza")
@@ -324,6 +324,15 @@ demo_cluster <- demo_cluster |>
     )
   )
 
+# Verificamos que el cluster 1 sea efectivamente el menos envejecido
+control_perfil_continuo <- demo_cluster |>
+  summarise(media_65 = mean(poblacion_65_mas), .by = perfil)
+
+stopifnot(
+  control_perfil_continuo$media_65[control_perfil_continuo$perfil == "Joven y expansivo"] <
+    control_perfil_continuo$media_65[control_perfil_continuo$perfil == "Transición avanzada"]
+)
+
 # Guardamos la clasificación país-año del cluster continuo
 write_csv(demo_cluster, "output/tablas/demo_cluster_continuo.csv")
 
@@ -517,6 +526,13 @@ evolucion_perfiles <- bind_rows(
   arrange(anio, clust)
 
 evolucion_perfiles
+
+# Verificamos que en los seis momentos el cluster 1 sea el menos envejecido
+control_evolucion <- evolucion_perfiles |>
+  select(anio, clust, poblacion_65_mas) |>
+  pivot_wider(names_from = clust, values_from = poblacion_65_mas, names_prefix = "cluster_")
+
+stopifnot(all(control_evolucion$cluster_1 < control_evolucion$cluster_2))
 
 # Guardamos la evolución de los perfiles en los seis momentos
 write_csv(evolucion_perfiles, "output/tablas/evolucion_perfiles.csv")
@@ -754,3 +770,18 @@ gtsave(
   "output/tablas/tabla_evolucion_perfiles.png",
   zoom = 2
 )
+
+# Control final de archivos generados ####
+
+archivos_generados <- c(
+  "output/tablas/base_demo_interpolada.csv",
+  "output/tablas/demo_cluster_continuo.csv",
+  "output/tablas/evolucion_perfiles.csv",
+  "output/graficos/comparacion_caracteristicas_de_las_trayectorias.jpg",
+  "output/graficos/perfiles_clusters_comparados.jpg",
+  "output/tablas/tabla_evolucion_perfiles.png"
+)
+
+stopifnot(all(file.exists(archivos_generados)))
+
+print("10 finalizado: todos los archivos fueron generados.")

@@ -1,8 +1,11 @@
 # ==============================================================================
-# 03 - Análisis exploratorio de la base WDI
+# Análisis descriptivo de la base WDI
 # ==============================================================================
 
 library(tidyverse)
+
+# Funciones propias
+source("utils/etiquetar_variables.R")
 
 wdi_limpia <- read_csv(
   "input/wdi_limpia.csv",
@@ -148,10 +151,6 @@ etiquetas_variables <- c(
 
 stopifnot(all(variables_principales %in% names(etiquetas_variables)))
 
-etiquetar_variables <- function(x) {
-  stringr::str_wrap(unname(etiquetas_variables[x]), width = 24)
-}
-
 # La figura usa una escala común (0-100%) para comparar regiones y décadas.
 # El porcentaje es de observaciones país-año sin datos, no de población.
 grafico_mapas_na <- ggplot(
@@ -183,7 +182,7 @@ grafico_mapas_na <- ggplot(
   ) +
   scale_y_discrete(
     limits = rev(variables_mapa),
-    labels = etiquetar_variables,
+    labels = \(x) etiquetar_variables(x, etiquetas_variables),
     expand = expansion(add = 0.05)
   ) +
   labs(

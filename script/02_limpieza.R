@@ -2,7 +2,7 @@
 # Limpieza de la base WDI
 # ==============================================================================
 
-# 1. Paquetes 
+# Paquetes
 
 library(tidyverse)
 
