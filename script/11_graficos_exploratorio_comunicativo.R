@@ -1,5 +1,5 @@
 # ==============================================================================
-# 05 - Visualizaciones: gráfico exploratorio y comunicativo
+# Visualizaciones: gráfico exploratorio y comunicativo
 # ==============================================================================
 
 # 1. Preparación del análisis ####
@@ -731,5 +731,5 @@ stopifnot(
   all(file.exists(archivos_generados))
 )
 
-print("05 finalizado: todos los gráficos fueron generados.")
+print("finalizado: todos los gráficos fueron generados.")
 
