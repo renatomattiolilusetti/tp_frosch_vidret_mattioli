@@ -1,7 +1,6 @@
 # Trayectorias del envejecimiento poblacional
 
-**Trabajo práctico final — Ciencia de Datos para Economía y Negocios, FCE-UBA (segundo cuatrimestre de 2026)**  
-**Grupo 10**
+**Trabajo práctico final — Ciencia de Datos para Economía y Negocios, FCE-UBA (segundo cuatrimestre de 2026) — Grupo 10**
 
 ## Integrantes
 
