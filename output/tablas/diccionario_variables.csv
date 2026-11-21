@@ -1,0 +1,57 @@
+variable,descripcion,tipo,unidad,rango_teorico
+pais,Nombre del país,Categórica,-,-
+codigo_pais,Código de tres letras utilizado para identificar al país,Categórica,-,-
+anio,Año al que corresponde la observación,Numérica discreta,Año calendario,1960 a 2025
+region,Región del Banco Mundial asociada al país en la descarga; no representa una clasificación histórica anual,Categórica,-,7 categorías
+ingreso,Grupo de ingreso del Banco Mundial en la descarga; no necesariamente corresponde al grupo de cada año histórico,Ordinal,-,4 grupos y Sin clasificar
+poblacion_total,Población total del país,Numérica,Personas,> 0
+poblacion_mill,Población total del país dividida por un millón,Numérica,Millones de personas,> 0
+crecimiento_poblacional,Tasa de crecimiento exponencial anual de la población del país,Numérica,% anual,-Inf a Inf
+natalidad,Nacimientos vivos durante el año respecto de la población a mitad de año,Numérica,Nacimientos por cada 1.000 habitantes,>= 0
+mortalidad,Defunciones durante el año respecto de la población a mitad de año,Numérica,Defunciones por cada 1.000 habitantes,>= 0
+migracion_neta,Cantidad de inmigrantes menos emigrantes durante el año,Numérica,Personas,-Inf a Inf
+fecundidad,Número de hijos que tendría una mujer bajo las tasas de fecundidad por edad del período,Numérica,Hijos por mujer,>= 0
+esperanza_vida,Años que viviría un recién nacido bajo las tasas de mortalidad por edad del período,Numérica,Años,>= 0
+poblacion_15_64,Personas de 15 a 64 años como proporción de la población total,Numérica,% de la población total,0 a 100
+poblacion_65_mas,Personas de 65 años o más como proporción de la población total,Numérica,% de la población total,0 a 100
+pib_per_capita_ppa,"PIB por habitante, ajustado por paridad de poder adquisitivo",Numérica,Dólares internacionales constantes de 2021 por habitante,> 0
+gasto_salud_pib,"Gasto corriente en salud, público y privado, en relación con el PIB",Numérica,% del PIB,>= 0
+gasto_publico_salud_pib,"Gasto corriente del gobierno general en salud financiado con fuentes internas, en relación con el PIB",Numérica,% del PIB,>= 0
+gasto_bolsillo_salud,Pagos directos de los hogares por salud respecto del gasto corriente total en salud,Numérica,% del gasto corriente en salud,0 a 100
+indice_cobertura_salud,Índice de cobertura de servicios esenciales de salud (UHC),Numérica,Índice de 0 a 100,0 a 100
+mujeres_0_4_pct,Mujeres de 0 a 4 años,Numérica,% de la población femenina,0 a 100
+mujeres_5_9_pct,Mujeres de 5 a 9 años,Numérica,% de la población femenina,0 a 100
+mujeres_10_14_pct,Mujeres de 10 a 14 años,Numérica,% de la población femenina,0 a 100
+mujeres_15_19_pct,Mujeres de 15 a 19 años,Numérica,% de la población femenina,0 a 100
+mujeres_20_24_pct,Mujeres de 20 a 24 años,Numérica,% de la población femenina,0 a 100
+mujeres_25_29_pct,Mujeres de 25 a 29 años,Numérica,% de la población femenina,0 a 100
+mujeres_30_34_pct,Mujeres de 30 a 34 años,Numérica,% de la población femenina,0 a 100
+mujeres_35_39_pct,Mujeres de 35 a 39 años,Numérica,% de la población femenina,0 a 100
+mujeres_40_44_pct,Mujeres de 40 a 44 años,Numérica,% de la población femenina,0 a 100
+mujeres_45_49_pct,Mujeres de 45 a 49 años,Numérica,% de la población femenina,0 a 100
+mujeres_50_54_pct,Mujeres de 50 a 54 años,Numérica,% de la población femenina,0 a 100
+mujeres_55_59_pct,Mujeres de 55 a 59 años,Numérica,% de la población femenina,0 a 100
+mujeres_60_64_pct,Mujeres de 60 a 64 años,Numérica,% de la población femenina,0 a 100
+mujeres_65_69_pct,Mujeres de 65 a 69 años,Numérica,% de la población femenina,0 a 100
+mujeres_70_74_pct,Mujeres de 70 a 74 años,Numérica,% de la población femenina,0 a 100
+mujeres_75_79_pct,Mujeres de 75 a 79 años,Numérica,% de la población femenina,0 a 100
+mujeres_80_mas_pct,Mujeres de 80 años o más,Numérica,% de la población femenina,0 a 100
+varones_0_4_pct,Varones de 0 a 4 años,Numérica,% de la población masculina,0 a 100
+varones_5_9_pct,Varones de 5 a 9 años,Numérica,% de la población masculina,0 a 100
+varones_10_14_pct,Varones de 10 a 14 años,Numérica,% de la población masculina,0 a 100
+varones_15_19_pct,Varones de 15 a 19 años,Numérica,% de la población masculina,0 a 100
+varones_20_24_pct,Varones de 20 a 24 años,Numérica,% de la población masculina,0 a 100
+varones_25_29_pct,Varones de 25 a 29 años,Numérica,% de la población masculina,0 a 100
+varones_30_34_pct,Varones de 30 a 34 años,Numérica,% de la población masculina,0 a 100
+varones_35_39_pct,Varones de 35 a 39 años,Numérica,% de la población masculina,0 a 100
+varones_40_44_pct,Varones de 40 a 44 años,Numérica,% de la población masculina,0 a 100
+varones_45_49_pct,Varones de 45 a 49 años,Numérica,% de la población masculina,0 a 100
+varones_50_54_pct,Varones de 50 a 54 años,Numérica,% de la población masculina,0 a 100
+varones_55_59_pct,Varones de 55 a 59 años,Numérica,% de la población masculina,0 a 100
+varones_60_64_pct,Varones de 60 a 64 años,Numérica,% de la población masculina,0 a 100
+varones_65_69_pct,Varones de 65 a 69 años,Numérica,% de la población masculina,0 a 100
+varones_70_74_pct,Varones de 70 a 74 años,Numérica,% de la población masculina,0 a 100
+varones_75_79_pct,Varones de 75 a 79 años,Numérica,% de la población masculina,0 a 100
+varones_80_mas_pct,Varones de 80 años o más,Numérica,% de la población masculina,0 a 100
+mujeres_total_pct,Mujeres como proporción de la población total,Numérica,% de la población total,0 a 100
+varones_total_pct,Varones como proporción de la población total,Numérica,% de la población total,0 a 100
