@@ -1,6 +1,7 @@
 # ==============================================================================
 # Visualizaciones: gráfico exploratorio y comunicativo
 # ==============================================================================
+<<<<<<< HEAD
 
 # 1. Preparación del análisis ####
 
@@ -28,6 +29,24 @@ library(patchwork)
 dir.create("output/graficos", recursive = TRUE, showWarnings = FALSE)
 >>>>>>> 197f35e5d3936f25007ea6a8447baf181474ff7a:script/11_graficos_exploratorio_comunicativo.R
 
+=======
+
+# 1. Preparación del análisis ####
+
+# Cargar paquetes
+library(tidyverse)
+library(FactoMineR)
+library(ggrepel)
+library(scales)
+library(sf)
+library(rnaturalearth)
+library(ggtext)
+library(patchwork)
+
+# Crear la carpeta de resultados si no existe
+dir.create("output/graficos", recursive = TRUE, showWarnings = FALSE)
+
+>>>>>>> 197f35e5d3936f25007ea6a8447baf181474ff7a
 # Variables y períodos utilizados en los gráficos
 anios_analisis <- c(1980, 1995, 2010, 2024)
 vars_demograficas <- c("poblacion_65_mas", "fecundidad", "esperanza_vida",
