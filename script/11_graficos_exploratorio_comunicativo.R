@@ -1,37 +1,82 @@
-# =============================================================================
-# Grupo 10 · Instancia 3 · Gráfico EXPLORATORIO
-# Los perfiles demográficos en 1980, 1995, 2010 y 2024 sobre UN MISMO plano
-# Versión final: halo para Argentina, leyenda con círculos y eje cero suave.
-# Exportación robusta sin cajas de texto de ggtext.
+# ==============================================================================
+# Visualizaciones: gráfico exploratorio y comunicativo
+# ==============================================================================
+
+# 1. Preparación del análisis ####
+
+# Cargar paquetes
+library(tidyverse)
+library(FactoMineR)
+library(ggrepel)
+library(scales)
+library(sf)
+library(rnaturalearth)
+library(ggtext)
+library(patchwork)
+
+<<<<<<< HEAD:script/05_graficos_entrega3.R
+# ------------------------------------------------------------------------------
+# 2. Ejemplo de uso (poner DESPUÉS DE CADA GRÁFICO que vayas creando)
+# ------------------------------------------------------------------------------
+# Supongamos que creaste un objeto llamado `mi_grafico`:
+# guardar_grafico_output(mi_grafico, "nombre_del_grafico.jpg", ancho_cm = 24, alto_cm = 15)
 #
-# Se corre DESPUÉS de 03.02_clustering.R: usa `base_cluster_demografico`
-# (ya sin PSE) y `trayectorias_paises` (cluster de cada país en cada año).
-#
-# En 03.02 el PCA se estimó por separado en cada año, así que sus ejes no son
-# comparables entre años. Acá estimamos UN PCA con los cuatro años apilados
-# (194 países × 4) para que los paneles compartan ejes. Los colores siguen
-# siendo los clusters de 03.02: no se re-estiman.
-# =============================================================================
+# Si no le pasás un objeto `grafico`, toma el último gráfico dibujado con `last_plot()`:
+# guardar_grafico_output(last_plot(), "ultimo_grafico.jpg")
+=======
+# Crear la carpeta de resultados si no existe
+dir.create("output/graficos", recursive = TRUE, showWarnings = FALSE)
+>>>>>>> 197f35e5d3936f25007ea6a8447baf181474ff7a:script/11_graficos_exploratorio_comunicativo.R
 
-paquetes <- c("tidyverse", "FactoMineR", "ggrepel", "scales")
-faltan <- setdiff(paquetes, rownames(installed.packages()))
-if (length(faltan) > 0) install.packages(faltan)
-
-suppressWarnings(suppressPackageStartupMessages({
-  library(tidyverse)
-  library(FactoMineR)
-  library(ggrepel)
-  library(scales)
-}))
-
-
-# -----------------------------------------------------------------------------
-# 1. Datos: los cuatro momentos apilados + el cluster de cada país en cada año
-# -----------------------------------------------------------------------------
-
-anios <- c(1980, 1995, 2010, 2024)
+# Variables y períodos utilizados en los gráficos
+anios_analisis <- c(1980, 1995, 2010, 2024)
 vars_demograficas <- c("poblacion_65_mas", "fecundidad", "esperanza_vida",
                        "crecimiento_poblacional")
+
+# Lectura de datos necesarios
+archivos_necesarios <- c(
+  "input/wdi_limpia.csv",
+  "auxiliar/base_cluster_demografico_cortes.csv",
+  "output/tablas/trayectorias_paises_demograficos.csv"
+)
+
+# Verificar que existan los archivos
+archivos_faltantes <- archivos_necesarios[!file.exists(archivos_necesarios)]
+if (length(archivos_faltantes) > 0) {
+  stop("Faltan archivos necesarios: ", paste(archivos_faltantes, collapse = ", "))
+}
+
+# Leer la base limpia
+wdi_limpia <- read_csv(
+  "input/wdi_limpia.csv",
+  show_col_types = FALSE
+)
+
+# Leer la muestra utilizada en el clustering
+base_cluster_demografico <- read_csv(
+  "auxiliar/base_cluster_demografico_cortes.csv",
+  show_col_types = FALSE
+)
+
+# Leer las clasificaciones de los países
+trayectorias_paises <- read_csv(
+  "output/tablas/trayectorias_paises_demograficos.csv",
+  show_col_types = FALSE
+)
+
+# Verificar que no haya duplicados
+stopifnot(
+  !anyDuplicated(
+    base_cluster_demografico[c("codigo_pais", "anio")]
+  ),
+  !anyDuplicated(trayectorias_paises["pais"])
+)
+
+print("Datos cargados correctamente.")
+
+# 2. Gráfico exploratorio: perfiles demográficos en cuatro períodos ####
+
+# 2.1. Preparación de los datos para el PCA común
 
 clusters_largo <- trayectorias_paises |>
   pivot_longer(starts_with("cluster_"), names_to = "anio", values_to = "clust",
@@ -39,27 +84,26 @@ clusters_largo <- trayectorias_paises |>
   mutate(perfil = if_else(as.character(clust) == "1", "joven", "avanzado"))
 
 apilado <- base_cluster_demografico |>
-  filter(anio %in% anios) |>
+  filter(anio %in% anios_analisis) |>
   drop_na(all_of(vars_demograficas)) |>
   inner_join(clusters_largo, by = c("pais", "anio"))
 
-# Control: 117/77 en 1980 ... 84/110 en 2024
+# Control: distribución de perfiles por período (sin cantidades fijas)
 apilado |> count(anio, perfil) |> pivot_wider(names_from = perfil, values_from = n)
 
 
-# -----------------------------------------------------------------------------
-# 2. PCA apilado
-# -----------------------------------------------------------------------------
+# 2.2. PCA común para representar los cuatro períodos en los mismos ejes
 
 X_apilado <- apilado |> select(all_of(vars_demograficas)) |> as.data.frame()
 rownames(X_apilado) <- paste(apilado$pais, apilado$anio)
 
 pca_apilado <- PCA(X_apilado, scale.unit = TRUE, ncp = 2, graph = FALSE)
 pca_apilado$eig[1:2, ]
-pca_apilado$var$coord[, 1:2]    # MIRAR para escribir los títulos de los ejes
+pca_apilado$var$coord[, 1:2]
 
 # PC1 orientado para que crezca con el % de 65+ (a la derecha = más envejecido)
 signo1 <- sign(pca_apilado$var$coord["poblacion_65_mas", "Dim.1"])
+
 # PC2 orientado para que su variable más importante crezca hacia arriba
 carga2_bruta <- pca_apilado$var$coord[, "Dim.2"]
 signo2 <- sign(carga2_bruta[which.max(abs(carga2_bruta))])
@@ -68,26 +112,8 @@ puntos <- apilado |>
   mutate(PC1 = signo1 * pca_apilado$ind$coord[, 1],
          PC2 = signo2 * pca_apilado$ind$coord[, 2])
 
-var_pc1 <- pca_apilado$eig[1, 2]
-var_pc2 <- pca_apilado$eig[2, 2]
 
-# Explicación breve del eje vertical, armada con las cargas del PC2:
-# se nombran las variables con carga de 0,3 o más (en valor absoluto),
-# de la más importante a la menos importante.
-nombres_var <- c(poblacion_65_mas = "población de 65+", fecundidad = "fecundidad",
-                 esperanza_vida = "esperanza de vida", crecimiento_poblacional = "crecimiento poblacional")
-carga2  <- signo2 * carga2_bruta
-fuertes <- carga2[abs(carga2) >= 0.3]
-fuertes <- fuertes[order(-abs(fuertes))]
-texto_pc2 <- paste0(if_else(fuertes > 0, "más ", "menos "), nombres_var[names(fuertes)],
-                    collapse = " y ")
-round(carga2, 2)   # MIRAR: confirmar que la frase del eje y tenga sentido
-texto_pc2
-
-
-# -----------------------------------------------------------------------------
-# 3. Resumen de cada grupo: mediana en cada año
-# -----------------------------------------------------------------------------
+# 2.3. Medianas y etiquetas de los países
 
 resumen <- puntos |>
   group_by(anio, perfil) |>
@@ -95,16 +121,7 @@ resumen <- puntos |>
             sd_y = sd(PC2), n = n(), .groups = "drop")
 resumen   # cuánto se corre cada grupo (x) y cuánto se dispersa en y (sd_y)
 
-# País típico de cada grupo: el que, sumando los cuatro años, queda más cerca
-# de la mediana de su perfil. Tomamos dos trayectorias: siempre joven y
-# siempre avanzado.
-trayectoria_tipo <- trayectorias_paises |>
-  mutate(patron = paste(cluster_1980, cluster_1995, cluster_2010, cluster_2024, sep = "-")) |>
-  select(pais, patron) |>
-  filter(patron %in% c("1-1-1-1", "2-2-2-2"))
-
-# Solo buscamos entre países conocidos, con su nombre en castellano.
-# Se pueden agregar o sacar países de esta lista.
+# Solo buscamos entre países conocidos, con su nombre en castellano
 conocidos <- c(
   ARG = "Argentina", BRA = "Brasil", MEX = "México", CHL = "Chile", COL = "Colombia",
   PER = "Perú", URY = "Uruguay", BOL = "Bolivia", CUB = "Cuba", USA = "Estados Unidos",
@@ -115,16 +132,6 @@ conocidos <- c(
   TUR = "Turquía", EGY = "Egipto", MAR = "Marruecos", ZAF = "Sudáfrica", NGA = "Nigeria",
   ETH = "Etiopía", KEN = "Kenia", GHA = "Ghana", SEN = "Senegal", AUS = "Australia"
 )
-
-# Para que el país no quede tapado por el triángulo, medimos la distancia como
-# se ve en el gráfico (en cm, cada panel mide unos 19 x 4 cm) y exigimos que en
-# los cuatro años esté al menos a `separacion_cm` de la mediana. Entre los que
-# cumplen, elegimos el más cercano a la mediana (el más típico).
-ancho_panel_cm <- 19
-alto_panel_cm  <- 4
-separacion_cm  <- 0.6
-escala_x <- ancho_panel_cm / (1.12 * diff(range(puntos$PC1)))
-escala_y <- alto_panel_cm  / diff(quantile(puntos$PC2, c(0.005, 0.995)))
 
 # Destacar únicamente a Argentina
 etiquetas <- puntos |>
@@ -141,9 +148,10 @@ puntos  <- con_rotulo(puntos)
 resumen <- con_rotulo(resumen)
 etiquetas <- con_rotulo(etiquetas)
 
-# Rango visible: recortamos el 0,5% más extremo de cada lado en los dos ejes,
-# para que unos pocos países no estiren el gráfico (sobraba espacio a la
-# izquierda). Se informa en la nota cuántas observaciones quedan afuera.
+# Rango visible: recortamos el 0,5% más extremo de cada lado en los dos ejes, para que 
+# unos pocos países no estiren el gráfico. Se informa en la nota cuántas observaciones 
+# quedan afuera.
+
 # Eje x: se muestran todos los países y se deja aire a los dos costados, para
 # que se vea cómo las nubes se corren hacia la derecha.
 rango_x <- range(puntos$PC1)
@@ -153,8 +161,7 @@ lim_y   <- quantile(puntos$PC2, c(0.005, 0.995))
 n_fuera <- sum(puntos$PC2 < lim_y[1] | puntos$PC2 > lim_y[2])
 
 # Extremos de cada año: el país más joven (más a la izquierda en el componente 1)
-# y el más envejecido (más a la derecha), entre los que se ven en el gráfico.
-# Poner FALSE para sacarlos.
+# y el más envejecido (más a la derecha), entre los que se ven en el gráfico
 mostrar_extremos <- TRUE
 nombres_extra <- c(
   NER = "Níger", MLI = "Malí", TCD = "Chad", SOM = "Somalia", UGA = "Uganda", YEM = "Yemen",
@@ -181,6 +188,7 @@ extremos <- puntos |>
          nombre = coalesce(unname(conocidos[codigo_pais]), unname(nombres_extra[codigo_pais]), pais),
          texto = paste0(tipo, nombre))
 extremos |> select(anio, texto)
+
 # Control: avisa si algún extremo no tiene nombre en castellano cargado
 sin_traducir <- extremos |>
   filter(!codigo_pais %in% c(names(conocidos), names(nombres_extra))) |>
@@ -191,61 +199,43 @@ if (nrow(sin_traducir) > 0) {
 }
 if (!mostrar_extremos) extremos <- extremos[0, ]
 
-# Extremos cuyo nombre va abajo del punto (por defecto va arriba). Agregar
-# códigos si algún otro nombre se superpone con un círculo.
+# Extremos cuyo nombre va abajo del punto (por defecto va arriba)
 extremos_abajo <- c("SOM")
 extremos <- extremos |> mutate(abajo = codigo_pais %in% extremos_abajo)
 
 
-# Etiquetas de países típicos: el nombre va del lado opuesto al triángulo
-# (si el país está por encima de la mediana, el nombre va arriba; si está por
-# debajo, abajo), así nunca cae sobre el triángulo.
+# Posicionar la etiqueta de Argentina en relación con la mediana de su perfil
 etiquetas <- etiquetas |>
   left_join(select(resumen, anio, perfil, my = y), by = c("anio", "perfil")) |>
   mutate(abajo = PC2 < my)
 
 # Etiqueta de Argentina en 1980: posición fija a la derecha del eje vertical.
-# Los otros tres años mantienen sus etiquetas automáticas originales.
+# Los otros tres años mantienen sus etiquetas automáticas originales
 etiquetas_1980 <- etiquetas |> filter(anio == 1980)
 etiquetas_otras <- etiquetas |> filter(anio != 1980)
 
-
-# Cantidad de países representados: se calcula desde los datos, no se fija a mano.
+# Cantidad de países representados: se calcula desde los datos, no lo fijamos a mano
 n_paises_graficados <- n_distinct(puntos$codigo_pais)
 
-# -----------------------------------------------------------------------------
-# 4. Estilo visual: misma identidad que el mapa comunicativo
-# -----------------------------------------------------------------------------
 
-# Conservamos la tipografía sans (como en el mapa); evitamos descargas de fuentes.
+# 2.4. Estilo visual
+
 fuente_titulo <- "sans"
 fuente_texto  <- "sans"
 
-# Evitamos diferencias de tamaño entre la vista de RStudio y el JPG exportado
-# si showtext quedó activado por otro script de la materia.
 if ("showtext" %in% loadedNamespaces()) showtext::showtext_auto(FALSE)
 
-# Colores idénticos al mapa comunicativo (paleta Okabe-Ito).
-# La transparencia se aplica solo a los puntos de países, no a las medianas.
+# Paleta (común: Okabe-Ito)
 col_perfil <- c(joven = "#0072B2", avanzado = "#E69F00")
 
-# Colores de textos iguales a los del mapa comunicativo.
 azul_titulo <- "#19354D"
 azul_texto  <- "#38536B"
 azul_nota   <- "#4F6478"
 gris_ejes   <- "#677887"
 
-# Para prevenir errores de viewport, usamos textos normales de ggplot2
-# en vez de cajas de texto de ggtext (element_textbox_simple).
-# La leyenda identifica las categorías con los mismos colores de los mapas.
 
+# 2.5. Construcción del gráfico exploratorio
 
-# -----------------------------------------------------------------------------
-# 5. Gráfico exploratorio (cuatro momentos, un solo PCA común)
-# -----------------------------------------------------------------------------
-
-# Las figuras y datos de los cuatro paneles siguen siendo los originales.
-# Cambios: paleta, transparencia, jerarquía textual, subtítulo y notas.
 grafico_exploratorio <- ggplot(puntos, aes(PC1, PC2)) +
   
   # Referencias centrales, sin grilla excesiva
@@ -354,8 +344,6 @@ grafico_exploratorio <- ggplot(puntos, aes(PC1, PC2)) +
       "Distintas trayectorias del envejecimiento:\n",
       "perfiles jóvenes y avanzados en ", n_paises_graficados, " países"
     ),
-    # Recuperamos el subtítulo del exploratorio original. Los saltos de línea
-    # evitan que el texto se corte en el JPG exportado.
     subtitle = paste0(
       "El perfil joven tiene más fecundidad y crecimiento poblacional que el avanzado,\n",
       "y menos población de 65+ y esperanza de vida. Los perfiles se definen en cada año\n",
@@ -380,10 +368,6 @@ grafico_exploratorio <- ggplot(puntos, aes(PC1, PC2)) +
   theme(
     plot.title.position = "plot",
     plot.caption.position = "plot",
-    
-    # Textos de ggplot2 con saltos de línea explícitos.
-    # A diferencia de ggtext, no necesitan una caja con ancho relativo
-    # al panel de RStudio: evita el error "Viewport has zero dimension(s)".
     plot.title = element_text(
       family = fuente_titulo, size = 18, face = "bold",
       color = azul_titulo, hjust = 0.5, lineheight = 1.08,
@@ -400,7 +384,6 @@ grafico_exploratorio <- ggplot(puntos, aes(PC1, PC2)) +
       margin = margin(t = 12)
     ),
     
-    # Cada panel sigue teniendo su encabezado propio
     strip.text = element_text(
       face = "bold", hjust = 0, color = azul_titulo,
       size = 11.7, margin = margin(t = 3, b = 6)
@@ -425,13 +408,8 @@ grafico_exploratorio <- ggplot(puntos, aes(PC1, PC2)) +
     plot.margin = margin(16, 18, 14, 16)
   )
 
-# No usamos print() acá: source() puede ejecutarse con el panel Plots
-# minimizado, y el dispositivo puede tener dimensiones cero.
-# El archivo JPG se genera directamente con ggsave() a tamaño fijo.
 
-# Guardado para instancia 3: entre 20 y 25 cm de ancho, mínimo 300 dpi.
-# No alteramos ningún dato ni re-estimamos los clusters.
-dir.create("output/graficos", recursive = TRUE, showWarnings = FALSE)
+# 2.6. Exportación del gráfico exploratorio
 
 archivo_exploratorio <- "output/graficos/grupo_10_exploratorio.jpg"
 ggsave(
@@ -445,21 +423,11 @@ ggsave(
   quality = 95
 )
 
-message("Gráfico exploratorio guardado en: ", archivo_exploratorio)
-# Abrir el JPG exportado: el panel Plots puede mostrar proporciones distintas.
 
-####### GRAFICO COMUNICATIVO ###################################################
+# 3. Gráfico comunicativo: mapas demográficos de 1980 y 2024 ####
 
-library(tidyverse)
-library(FactoMineR)
-library(sf)
-library(rnaturalearth)
-library(ggtext)
-library(patchwork)
-
-variables <- c("poblacion_65_mas", "fecundidad",
-               "esperanza_vida", "crecimiento_poblacional")
-columnas_necesarias <- c("pais", "codigo_pais", "anio", variables)
+# 3.1. Preparación de los datos para ambos mapas
+columnas_necesarias <- c("pais", "codigo_pais", "anio", vars_demograficas)
 
 if (!all(columnas_necesarias %in% names(wdi_limpia))) {
   stop(paste("Faltan columnas en wdi_limpia:",
@@ -467,21 +435,19 @@ if (!all(columnas_necesarias %in% names(wdi_limpia))) {
                    collapse = ", ")))
 }
 
-# 3. DEFINIR EL MISMO UNIVERSO PARA 1980 Y 2024 ------------------------------
-# Se conserva la exclusion de PSE utilizada en el script anterior.
 base_mapas <- wdi_limpia |>
   filter(anio %in% c(1980, 2024),
          !is.na(codigo_pais), codigo_pais != "PSE") |>
   select(all_of(columnas_necesarias))
 
-# La unidad de observacion debe ser pais-ano.
+# La unidad de observacion debe ser pais-año
 if (anyDuplicated(base_mapas[c("codigo_pais", "anio")]) > 0) {
   stop("Se encontraron filas duplicadas para un mismo país y año.")
 }
 
-# No se reemplazan NA por cero ni se imputan valores faltantes.
+# No se reemplazan NA por cero ni se imputan valores faltantes
 base_mapas <- base_mapas |>
-  filter(if_all(all_of(variables), ~ !is.na(.x) & is.finite(.x)))
+  filter(if_all(all_of(vars_demograficas), ~ !is.na(.x) & is.finite(.x)))
 
 paises_comunes <- base_mapas |>
   count(codigo_pais, name = "n_anios") |>
@@ -498,14 +464,16 @@ if (n_comparables < 3) {
 
 message("Países comparables para ambos años: ", n_comparables)
 
-# 4. PCA + HCPC (MISMA LOGICA DEL ANALISIS ORIGINAL) -------------------------
+
+# 3.2. PCA y clasificación demográfica por período
+
 clasificar_anio <- function(anio_elegido) {
   
   datos <- base_mapas |>
     filter(anio == anio_elegido)
   
   matriz <- datos |>
-    select(all_of(variables)) |>
+    select(all_of(vars_demograficas)) |>
     as.data.frame()
   rownames(matriz) <- datos$codigo_pais
   
@@ -554,11 +522,11 @@ perfiles <- bind_rows(
 stopifnot(anyDuplicated(perfiles[c("codigo_pais", "anio")]) == 0)
 stopifnot(nrow(perfiles) == 2 * n_comparables)
 
-resumen <- perfiles |>
+resumen_mapa <- perfiles |>
   count(anio, perfil, name = "paises") |>
   arrange(anio, perfil)
 
-print(resumen)
+print(resumen_mapa)
 
 n_1980 <- sum(perfiles$anio == 1980 &
                 perfiles$perfil == "Transición avanzada")
@@ -566,9 +534,11 @@ n_2024 <- sum(perfiles$anio == 2024 &
                 perfiles$perfil == "Transición avanzada")
 cambio_neto <- n_2024 - n_1980
 
-# 5. CARTOGRAFIA Y UNION CONTROLADA ------------------------------------------
+
+# 3.3. Cartografía y uniones controladas
+
 # Natural Earth: la escala 50 requiere a veces una descarga inicial; 110
-# funciona como respaldo. No cambia la clasificacion de los paises.
+# funciona como respaldo. No cambia la clasificacion de los paises
 mundo <- tryCatch(
   rnaturalearth::ne_countries(scale = 50, returnclass = "sf"),
   error = function(e) {
@@ -610,8 +580,10 @@ mapa_2024 <- mundo |>
             by = "codigo_pais", relationship = "many-to-one") |>
   mutate(anio = 2024)
 
-# 6. PALETA Y TEXTOS --------------------------------------------------------
-# Azul y naranja: paleta Okabe-Ito, de alto contraste.
+
+# 3.4. Paleta de colores y textos
+
+# Paleta Okabe-Ito
 paleta <- c(
   "Perfil demográfico joven" = "#0072B2",
   "Transición avanzada"     = "#E69F00",
@@ -625,7 +597,6 @@ mapas <- bind_rows(mapa_1980, mapa_2024) |>
     perfil_mapa = factor(perfil_mapa, levels = names(paleta))
   )
 
-# Chequeo: los nombres de la clasificación deben coincidir con la paleta.
 stopifnot(!any(is.na(mapas$perfil_mapa)))
 
 if (cambio_neto > 0) {
@@ -636,14 +607,12 @@ if (cambio_neto > 0) {
   mensaje_cambio <- "la misma cantidad de países"
 }
 
-# Un único bloque de título: nunca posicionar sus partes a mano.
 titulo_principal <- paste0(
   "El perfil demográfico avanzado reúne<br>",
   "<span style='color:#A66A00'><b>", mensaje_cambio,
   "</b></span> que en 1980"
 )
 
-# Subtítulo pedido, con cortes de línea deliberados.
 subtitulo_principal <- paste0(
   "En 2024 hay más países con baja fecundidad, mayor esperanza de vida\n",
   "y mayor peso de la población de 65+ que en 1980.\n",
@@ -662,9 +631,9 @@ color_titulo <- "#18344D"
 color_texto  <- "#36536B"
 color_nota   <- "#52677A"
 
-# 7. CREAR CADA MAPA CON SU ENCABEZADO --------------------------------------
-# Son dos ggplots normales: el ancho del mapa y el del encabezado se adaptan
-# al ancho del gráfico exportado. No se usan coordenadas x/y para los textos.
+
+# 3.5. Construcción de los mapas de 1980 y 2024
+
 crear_mapa <- function(anio_elegido, cantidad_avanzados) {
   
   datos <- mapas |>
@@ -710,11 +679,10 @@ crear_mapa <- function(anio_elegido, cantidad_avanzados) {
 mapa_grafico_1980 <- crear_mapa(1980, n_1980)
 mapa_grafico_2024 <- crear_mapa(2024, n_2024)
 
-# 8. COMBINAR AUTOMÁTICAMENTE CON PATCHWORK ---------------------------------
-# Alineacion hjust = 0.5: titulo, subtitulo, encabezados y notas centrados.
-# No modifica el tamano de los mapas ni el calculo de los perfiles.
-# patchwork alinea ambos mapas y organiza título, leyenda y fuente sin usar
-# posiciones fijas. Es un paquete complementario visto en la materia.
+
+# 3.6. Composición del gráfico comunicativo
+
+# Alineacion hjust = 0.5: titulo, subtitulo, encabezados y notas centrados
 comparacion <- (mapa_grafico_1980 / mapa_grafico_2024) +
   patchwork::plot_layout(
     ncol = 1,
@@ -733,12 +701,12 @@ comparacion <- (mapa_grafico_1980 / mapa_grafico_2024) +
         face = "bold", size = 18.5, color = color_titulo,
         hjust = 0.5, halign = 0.5, lineheight = 1.14, margin = margin(b = 9)
       ),
-      # Subtítulo más grande, con las tres líneas centradas.
+      # Subtítulo con las tres líneas centradas.
       plot.subtitle = element_text(
         size = 13.2, color = color_texto, hjust = 0.5,
         lineheight = 1.22, margin = margin(b = 19)
       ),
-      # Fuente y nota más legibles en el JPG a 300 dpi.
+      # Fuente y nota para la exportación a 300 dpi.
       plot.caption = element_text(
         size = 10.5, color = color_nota, hjust = 0.5,
         lineheight = 1.22, margin = margin(t = 14)
@@ -748,32 +716,31 @@ comparacion <- (mapa_grafico_1980 / mapa_grafico_2024) +
   ) &
   theme(legend.position = "bottom")
 
-# 9. EXPORTAR LOS TRES JPG --------------------------------------------------
-# La imagen COMUNICATIVA es VERTICAL: dos mapas superpuestos con buen tamaño.
-# El zoom horizontal de RStudio no reproduce esta proporción. El archivo JPG sí.
-carpeta_salida <- file.path("output", "graficos")
-dir.create(carpeta_salida, recursive = TRUE, showWarnings = FALSE)
 
-archivo_comparacion <- file.path(carpeta_salida, "grupo_10_comunicativo.jpg")
+# 3.7. Exportación del gráfico comunicativo
+
+archivo_comunicativo <- "output/graficos/grupo_10_comunicativo.jpg"
 
 ggsave(
-  filename = archivo_comparacion,
+  filename = archivo_comunicativo,
   plot = comparacion,
-  # Un poco más de alto para dar aire al texto, sin achicar los mapas.
-  width = 24.5, height = 27.0, units = "cm", dpi = 300,
+  width = 24.5,
+  height = 27,
+  units = "cm",
+  dpi = 300,
   bg = "white"
 )
 
-ggsave(
-  filename = file.path(carpeta_salida, "mapa_perfiles_1980.jpg"),
-  plot = mapa_grafico_1980,
-  width = 24.5, height = 15.5, units = "cm", dpi = 300,
-  bg = "white"
+# 4. Control final de archivos generados ####
+
+archivos_generados <- c(
+  "output/graficos/grupo_10_exploratorio.jpg",
+  "output/graficos/grupo_10_comunicativo.jpg"
 )
 
-ggsave(
-  filename = file.path(carpeta_salida, "mapa_perfiles_2024.jpg"),
-  plot = mapa_grafico_2024,
-  width = 24.5, height = 15.5, units = "cm", dpi = 300,
-  bg = "white"
+stopifnot(
+  all(file.exists(archivos_generados))
 )
+
+print("finalizado: todos los gráficos fueron generados.")
+

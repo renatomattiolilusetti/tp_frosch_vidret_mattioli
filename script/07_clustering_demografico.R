@@ -1,5 +1,5 @@
 # ==============================================================================
-# Clustering demográficos
+# Clustering demográfico
 # ==============================================================================
 
 # 1. Preparación del análisis
@@ -56,8 +56,7 @@ print(dim(wdi_limpia))
 
 
 # Buscamos identificar qué perfiles demográficos existen en distintos momentos 
-# del tiempo y observar si los países cambian entre esos perfiles. 
-
+# del tiempo y observar si los países cambian entre esos perfiles
 vars_demograficas <- c(
   "poblacion_65_mas",
   "fecundidad",
@@ -77,8 +76,7 @@ base_cluster_demografico <- wdi_limpia |>
   )
 
 # Contamos para cada año cuántos países tienen dato en cada variable y cuántos tienen 
-# completas las cuatro variables seleccionadas simultáneamente.
-
+# completas las cuatro variables seleccionadas simultáneamente
 cobertura_cluster_demografico <- base_cluster_demografico |>
   group_by(anio) |>
   summarise(
@@ -191,7 +189,7 @@ tibble(
 ) |>
   print()
 
-# PCA y clustering demográfico - 2024
+# PCA y clustering demográfico - 2024 ####
 
 # Cargar nuestra función
 source("utils/pca_demografico.R")
@@ -270,7 +268,7 @@ cat(
 
 print(caracterizacion_2024, n = Inf)
 
-# PCA y clustering demográfico - 2010
+# PCA y clustering demográfico - 2010 ####
 
 # 1. PCA
 resultado_pca_2010 <- pca_demografico(
@@ -324,7 +322,7 @@ cat(
 
 print(caracterizacion_2010, n = Inf)
 
-# PCA y clustering demográfico - 1995
+# PCA y clustering demográfico - 1995 ####
 
 # 1. PCA
 resultado_pca_1995 <- pca_demografico(
@@ -378,7 +376,7 @@ cat(
 
 print(caracterizacion_1995, n = Inf)
 
-# PCA y clustering demográfico - 1980
+# PCA y clustering demográfico - 1980 ####
 
 # 1. PCA
 resultado_pca_1980 <- pca_demografico(
@@ -405,7 +403,6 @@ silhouette_1980 <- evaluar_clusters_demograficos(
 )
 
 print(silhouette_1980, n = Inf)
-
 
 # 3. Clustering definitivo con k = 2
 resultado_cluster_1980 <- clustering_demografico(
@@ -636,7 +633,8 @@ print(perfiles_comparados)
 # Vemos que sí, se mantienen las caracteristicas de los grupos
 
 # Ahora formamos trayectoria_paises, agregando el grupo a cada país, para ver 
-# cuándo cambiaron. 
+# cuándo cambiaron
+
 trayectorias_paises <- perfiles_1980 |>
   rename(cluster_1980 = clust) |>
   left_join(
@@ -654,8 +652,6 @@ trayectorias_paises <- perfiles_1980 |>
       rename(cluster_2024 = clust),
     by = "pais"
   )
-
-# Exportar datos para los gráficos posteriores
 
 # Verificar que cada país tenga una trayectoria completa
 stopifnot(
@@ -688,7 +684,6 @@ stopifnot(
 
 print("Archivos auxiliares del clustering guardados correctamente.")
 
-
 # Contamos cuántos siguieron cada trayectoria
 trayectorias_paises |>
   count(
@@ -701,9 +696,9 @@ trayectorias_paises |>
 
 # 74 permanecieron en el perfil 2, mientras que 71 en el perfil 1. Suman 145 países.
 # 33 países cambiaron de la trayectoria 1 a la 2 y se mantuvieron en la 2 luego.
-# (13+14+6). Mientras que 16 alternan entre grupos (filas 5 y de 7 a 10). 
+# (13+14+6). Mientras que 16 alternan entre grupos (filas 5 y de 7 a 10).
 
-# Cuáles son los países que pasan entre perfiles? (de los 33). 
+# Cuáles son los países que pasan entre perfiles? (de los 33)
 
 # Cambiaron entre 1980 y 1995
 
@@ -754,7 +749,7 @@ trayectorias_no_lineales
 # Exportación de resultados ####
 
 # Guardamos la caracterización de los clusters de los cuatro momentos analizados
-# para reutilizar estos resultados en los análisis longitudinales posteriores.
+# para reutilizar estos resultados en los análisis longitudinales posteriores
 
 perfiles_comparados |>
   mutate(
@@ -764,7 +759,7 @@ perfiles_comparados |>
       "Transición avanzada"
     )
   ) |>
-  write_csv("auxiliar/perfiles_clusters_1980_2024.csv")
+  write_csv("output/tablas/perfiles_clusters_1980_2024.csv")
 
 # Prueba de sensibilidad (sin outliers) ####
 
@@ -773,14 +768,12 @@ perfiles_comparados |>
 
 # Identificamos todos los países que aparecen como outlier
 # en al menos una variable y en al menos uno de los cuatro años
-
 paises_outliers_total <- outliers_cluster_demografico |>
   distinct(codigo_pais)
 
 paises_outliers_total
 
 # Cantidad de países distintos que presentan al menos un outlier
-
 nrow(paises_outliers_total)
 
 # Cuántos países perdemos y cuántos quedan para la prueba de sensibilidad
@@ -881,7 +874,6 @@ pca_2024_sin_outliers <- PCA(
 )
 
 # Comparamos cuanto explican los componentes CON y SIN outliers
-
 sensibilidad_pca_outliers <- tibble(
   anio = c(1980, 1995, 2010, 2024),
   
@@ -917,7 +909,6 @@ sensibilidad_pca_outliers <- tibble(
 sensibilidad_pca_outliers
 
 # Repetimos clustering sin países con outliers
-
 hcpc_1980_sin_outliers <- HCPC(
   pca_1980_sin_outliers,
   nb.clust = 2,
@@ -1012,10 +1003,9 @@ sensibilidad_cluster_outliers <- tibble(
 print(sensibilidad_cluster_outliers)
 
 # Silhouette no cambia demasiado al sacar los países que tuvieron algún outlier.
-# No hay evidencia de que los outliers estén afectando artificialmente los dos grupos.
+# No hay evidencia de que los outliers estén afectando artificialmente los dos grupos
 
 # Tabla resumen por año y variable 
-
 outliers_cluster_demografico |>
   count(anio, variable)
 
@@ -1023,7 +1013,6 @@ outliers_cluster_demografico |>
   arrange(anio, variable, pais)
 
 # Gráficos para PPT ####
-
 
 # Silhouette media de la solución k = 2 por año
 # Utilizamos los resultados calculados anteriormente
@@ -1177,7 +1166,6 @@ ggsave(
 )
 
 # Trayectorias resumen
-
 trayectorias_resumen <- trayectorias_paises |>
   count(
     cluster_1980,
@@ -1223,7 +1211,6 @@ gtsave(
 )
 
 # Tabla perfiles comparados 
-
 tabla_perfiles <- perfiles_comparados |>
 rename(
   `Año` = anio,
@@ -1271,7 +1258,6 @@ gtsave(
 )
 
 # Cambio de pesos 
-
 evolucion_clusters <- perfiles_comparados |>
   select(anio, clust, n) |>
   mutate(
@@ -1330,7 +1316,6 @@ ggsave(
 )
 
 # Silhouettes por cluster
-
 silhouette_clusters <- bind_rows(
   
   as.data.frame(sil_1980) |>
@@ -1450,7 +1435,7 @@ archivos_generados <- c(
   "output/graficos/correlaciones_2024.png",
   "output/graficos/evolucion_clusters.png",
   "output/graficos/silhouette_por_cluster.png",
-  "auxiliar/perfiles_clusters_1980_2024.csv",
+  "output/tablas/perfiles_clusters_1980_2024.csv",
   "auxiliar/base_cluster_demografico_cortes.csv"
 )
 

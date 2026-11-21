@@ -1,0 +1,246 @@
+region,decada,variable,porcentaje_na
+América Latina y el Caribe,1960–1969,pib_per_capita_ppa,100
+América Latina y el Caribe,1960–1969,gasto_salud_pib,100
+América Latina y el Caribe,1960–1969,gasto_publico_salud_pib,100
+América Latina y el Caribe,1960–1969,gasto_bolsillo_salud,100
+América Latina y el Caribe,1960–1969,indice_cobertura_salud,100
+América Latina y el Caribe,1970–1979,pib_per_capita_ppa,100
+América Latina y el Caribe,1970–1979,gasto_salud_pib,100
+América Latina y el Caribe,1970–1979,gasto_publico_salud_pib,100
+América Latina y el Caribe,1970–1979,gasto_bolsillo_salud,100
+América Latina y el Caribe,1970–1979,indice_cobertura_salud,100
+América Latina y el Caribe,1980–1989,pib_per_capita_ppa,100
+América Latina y el Caribe,1980–1989,gasto_salud_pib,100
+América Latina y el Caribe,1980–1989,gasto_publico_salud_pib,100
+América Latina y el Caribe,1980–1989,gasto_bolsillo_salud,100
+América Latina y el Caribe,1980–1989,indice_cobertura_salud,100
+América Latina y el Caribe,1990–1999,pib_per_capita_ppa,6.06
+América Latina y el Caribe,1990–1999,gasto_salud_pib,100
+América Latina y el Caribe,1990–1999,gasto_publico_salud_pib,100
+América Latina y el Caribe,1990–1999,gasto_bolsillo_salud,100
+América Latina y el Caribe,1990–1999,indice_cobertura_salud,100
+América Latina y el Caribe,2000–2009,pib_per_capita_ppa,6.06
+América Latina y el Caribe,2000–2009,gasto_salud_pib,3.03
+América Latina y el Caribe,2000–2009,gasto_publico_salud_pib,3.03
+América Latina y el Caribe,2000–2009,gasto_bolsillo_salud,3.03
+América Latina y el Caribe,2000–2009,indice_cobertura_salud,0
+América Latina y el Caribe,2010–2019,pib_per_capita_ppa,6.06
+América Latina y el Caribe,2010–2019,gasto_salud_pib,2.42
+América Latina y el Caribe,2010–2019,gasto_publico_salud_pib,2.42
+América Latina y el Caribe,2010–2019,gasto_bolsillo_salud,2.42
+América Latina y el Caribe,2010–2019,indice_cobertura_salud,0
+América Latina y el Caribe,2020–2025,pib_per_capita_ppa,6.57
+América Latina y el Caribe,2020–2025,gasto_salud_pib,32.32
+América Latina y el Caribe,2020–2025,gasto_publico_salud_pib,32.32
+América Latina y el Caribe,2020–2025,gasto_bolsillo_salud,32.32
+América Latina y el Caribe,2020–2025,indice_cobertura_salud,33.33
+América del Norte,1960–1969,pib_per_capita_ppa,100
+América del Norte,1960–1969,gasto_salud_pib,100
+América del Norte,1960–1969,gasto_publico_salud_pib,100
+América del Norte,1960–1969,gasto_bolsillo_salud,100
+América del Norte,1960–1969,indice_cobertura_salud,100
+América del Norte,1970–1979,pib_per_capita_ppa,100
+América del Norte,1970–1979,gasto_salud_pib,100
+América del Norte,1970–1979,gasto_publico_salud_pib,100
+América del Norte,1970–1979,gasto_bolsillo_salud,100
+América del Norte,1970–1979,indice_cobertura_salud,100
+América del Norte,1980–1989,pib_per_capita_ppa,100
+América del Norte,1980–1989,gasto_salud_pib,100
+América del Norte,1980–1989,gasto_publico_salud_pib,100
+América del Norte,1980–1989,gasto_bolsillo_salud,100
+América del Norte,1980–1989,indice_cobertura_salud,100
+América del Norte,1990–1999,pib_per_capita_ppa,0
+América del Norte,1990–1999,gasto_salud_pib,100
+América del Norte,1990–1999,gasto_publico_salud_pib,100
+América del Norte,1990–1999,gasto_bolsillo_salud,100
+América del Norte,1990–1999,indice_cobertura_salud,100
+América del Norte,2000–2009,pib_per_capita_ppa,0
+América del Norte,2000–2009,gasto_salud_pib,0
+América del Norte,2000–2009,gasto_publico_salud_pib,0
+América del Norte,2000–2009,gasto_bolsillo_salud,0
+América del Norte,2000–2009,indice_cobertura_salud,0
+América del Norte,2010–2019,pib_per_capita_ppa,0
+América del Norte,2010–2019,gasto_salud_pib,0
+América del Norte,2010–2019,gasto_publico_salud_pib,0
+América del Norte,2010–2019,gasto_bolsillo_salud,0
+América del Norte,2010–2019,indice_cobertura_salud,0
+América del Norte,2020–2025,pib_per_capita_ppa,0
+América del Norte,2020–2025,gasto_salud_pib,25
+América del Norte,2020–2025,gasto_publico_salud_pib,25
+América del Norte,2020–2025,gasto_bolsillo_salud,25
+América del Norte,2020–2025,indice_cobertura_salud,33.33
+Asia Meridional,1960–1969,pib_per_capita_ppa,100
+Asia Meridional,1960–1969,gasto_salud_pib,100
+Asia Meridional,1960–1969,gasto_publico_salud_pib,100
+Asia Meridional,1960–1969,gasto_bolsillo_salud,100
+Asia Meridional,1960–1969,indice_cobertura_salud,100
+Asia Meridional,1970–1979,pib_per_capita_ppa,100
+Asia Meridional,1970–1979,gasto_salud_pib,100
+Asia Meridional,1970–1979,gasto_publico_salud_pib,100
+Asia Meridional,1970–1979,gasto_bolsillo_salud,100
+Asia Meridional,1970–1979,indice_cobertura_salud,100
+Asia Meridional,1980–1989,pib_per_capita_ppa,100
+Asia Meridional,1980–1989,gasto_salud_pib,100
+Asia Meridional,1980–1989,gasto_publico_salud_pib,100
+Asia Meridional,1980–1989,gasto_bolsillo_salud,100
+Asia Meridional,1980–1989,indice_cobertura_salud,100
+Asia Meridional,1990–1999,pib_per_capita_ppa,0
+Asia Meridional,1990–1999,gasto_salud_pib,100
+Asia Meridional,1990–1999,gasto_publico_salud_pib,100
+Asia Meridional,1990–1999,gasto_bolsillo_salud,100
+Asia Meridional,1990–1999,indice_cobertura_salud,100
+Asia Meridional,2000–2009,pib_per_capita_ppa,0
+Asia Meridional,2000–2009,gasto_salud_pib,0
+Asia Meridional,2000–2009,gasto_publico_salud_pib,0
+Asia Meridional,2000–2009,gasto_bolsillo_salud,0
+Asia Meridional,2000–2009,indice_cobertura_salud,0
+Asia Meridional,2010–2019,pib_per_capita_ppa,0
+Asia Meridional,2010–2019,gasto_salud_pib,0
+Asia Meridional,2010–2019,gasto_publico_salud_pib,0
+Asia Meridional,2010–2019,gasto_bolsillo_salud,0
+Asia Meridional,2010–2019,indice_cobertura_salud,0
+Asia Meridional,2020–2025,pib_per_capita_ppa,0
+Asia Meridional,2020–2025,gasto_salud_pib,33.33
+Asia Meridional,2020–2025,gasto_publico_salud_pib,33.33
+Asia Meridional,2020–2025,gasto_bolsillo_salud,33.33
+Asia Meridional,2020–2025,indice_cobertura_salud,33.33
+Asia Oriental y Pacífico,1960–1969,pib_per_capita_ppa,100
+Asia Oriental y Pacífico,1960–1969,gasto_salud_pib,100
+Asia Oriental y Pacífico,1960–1969,gasto_publico_salud_pib,100
+Asia Oriental y Pacífico,1960–1969,gasto_bolsillo_salud,100
+Asia Oriental y Pacífico,1960–1969,indice_cobertura_salud,100
+Asia Oriental y Pacífico,1970–1979,pib_per_capita_ppa,100
+Asia Oriental y Pacífico,1970–1979,gasto_salud_pib,100
+Asia Oriental y Pacífico,1970–1979,gasto_publico_salud_pib,100
+Asia Oriental y Pacífico,1970–1979,gasto_bolsillo_salud,100
+Asia Oriental y Pacífico,1970–1979,indice_cobertura_salud,100
+Asia Oriental y Pacífico,1980–1989,pib_per_capita_ppa,100
+Asia Oriental y Pacífico,1980–1989,gasto_salud_pib,100
+Asia Oriental y Pacífico,1980–1989,gasto_publico_salud_pib,100
+Asia Oriental y Pacífico,1980–1989,gasto_bolsillo_salud,100
+Asia Oriental y Pacífico,1980–1989,indice_cobertura_salud,100
+Asia Oriental y Pacífico,1990–1999,pib_per_capita_ppa,3.33
+Asia Oriental y Pacífico,1990–1999,gasto_salud_pib,100
+Asia Oriental y Pacífico,1990–1999,gasto_publico_salud_pib,100
+Asia Oriental y Pacífico,1990–1999,gasto_bolsillo_salud,100
+Asia Oriental y Pacífico,1990–1999,indice_cobertura_salud,100
+Asia Oriental y Pacífico,2000–2009,pib_per_capita_ppa,3.33
+Asia Oriental y Pacífico,2000–2009,gasto_salud_pib,4.33
+Asia Oriental y Pacífico,2000–2009,gasto_publico_salud_pib,4.33
+Asia Oriental y Pacífico,2000–2009,gasto_bolsillo_salud,4.33
+Asia Oriental y Pacífico,2000–2009,indice_cobertura_salud,0
+Asia Oriental y Pacífico,2010–2019,pib_per_capita_ppa,3.33
+Asia Oriental y Pacífico,2010–2019,gasto_salud_pib,3.33
+Asia Oriental y Pacífico,2010–2019,gasto_publico_salud_pib,3.33
+Asia Oriental y Pacífico,2010–2019,gasto_bolsillo_salud,3.33
+Asia Oriental y Pacífico,2010–2019,indice_cobertura_salud,0
+Asia Oriental y Pacífico,2020–2025,pib_per_capita_ppa,3.33
+Asia Oriental y Pacífico,2020–2025,gasto_salud_pib,34.44
+Asia Oriental y Pacífico,2020–2025,gasto_publico_salud_pib,35
+Asia Oriental y Pacífico,2020–2025,gasto_bolsillo_salud,34.44
+Asia Oriental y Pacífico,2020–2025,indice_cobertura_salud,33.33
+Europa y Asia Central,1960–1969,pib_per_capita_ppa,100
+Europa y Asia Central,1960–1969,gasto_salud_pib,100
+Europa y Asia Central,1960–1969,gasto_publico_salud_pib,100
+Europa y Asia Central,1960–1969,gasto_bolsillo_salud,100
+Europa y Asia Central,1960–1969,indice_cobertura_salud,100
+Europa y Asia Central,1970–1979,pib_per_capita_ppa,100
+Europa y Asia Central,1970–1979,gasto_salud_pib,100
+Europa y Asia Central,1970–1979,gasto_publico_salud_pib,100
+Europa y Asia Central,1970–1979,gasto_bolsillo_salud,100
+Europa y Asia Central,1970–1979,indice_cobertura_salud,100
+Europa y Asia Central,1980–1989,pib_per_capita_ppa,100
+Europa y Asia Central,1980–1989,gasto_salud_pib,100
+Europa y Asia Central,1980–1989,gasto_publico_salud_pib,100
+Europa y Asia Central,1980–1989,gasto_bolsillo_salud,100
+Europa y Asia Central,1980–1989,indice_cobertura_salud,100
+Europa y Asia Central,1990–1999,pib_per_capita_ppa,9.25
+Europa y Asia Central,1990–1999,gasto_salud_pib,100
+Europa y Asia Central,1990–1999,gasto_publico_salud_pib,100
+Europa y Asia Central,1990–1999,gasto_bolsillo_salud,100
+Europa y Asia Central,1990–1999,indice_cobertura_salud,100
+Europa y Asia Central,2000–2009,pib_per_capita_ppa,5.28
+Europa y Asia Central,2000–2009,gasto_salud_pib,5.66
+Europa y Asia Central,2000–2009,gasto_publico_salud_pib,5.66
+Europa y Asia Central,2000–2009,gasto_bolsillo_salud,5.66
+Europa y Asia Central,2000–2009,indice_cobertura_salud,3.77
+Europa y Asia Central,2010–2019,pib_per_capita_ppa,3.77
+Europa y Asia Central,2010–2019,gasto_salud_pib,2.64
+Europa y Asia Central,2010–2019,gasto_publico_salud_pib,2.64
+Europa y Asia Central,2010–2019,gasto_bolsillo_salud,2.64
+Europa y Asia Central,2010–2019,indice_cobertura_salud,3.77
+Europa y Asia Central,2020–2025,pib_per_capita_ppa,4.4
+Europa y Asia Central,2020–2025,gasto_salud_pib,29.87
+Europa y Asia Central,2020–2025,gasto_publico_salud_pib,34.28
+Europa y Asia Central,2020–2025,gasto_bolsillo_salud,29.87
+Europa y Asia Central,2020–2025,indice_cobertura_salud,35.85
+"Oriente Medio, Norte de África, Afganistán y Pakistán",1960–1969,pib_per_capita_ppa,100
+"Oriente Medio, Norte de África, Afganistán y Pakistán",1960–1969,gasto_salud_pib,100
+"Oriente Medio, Norte de África, Afganistán y Pakistán",1960–1969,gasto_publico_salud_pib,100
+"Oriente Medio, Norte de África, Afganistán y Pakistán",1960–1969,gasto_bolsillo_salud,100
+"Oriente Medio, Norte de África, Afganistán y Pakistán",1960–1969,indice_cobertura_salud,100
+"Oriente Medio, Norte de África, Afganistán y Pakistán",1970–1979,pib_per_capita_ppa,100
+"Oriente Medio, Norte de África, Afganistán y Pakistán",1970–1979,gasto_salud_pib,100
+"Oriente Medio, Norte de África, Afganistán y Pakistán",1970–1979,gasto_publico_salud_pib,100
+"Oriente Medio, Norte de África, Afganistán y Pakistán",1970–1979,gasto_bolsillo_salud,100
+"Oriente Medio, Norte de África, Afganistán y Pakistán",1970–1979,indice_cobertura_salud,100
+"Oriente Medio, Norte de África, Afganistán y Pakistán",1980–1989,pib_per_capita_ppa,100
+"Oriente Medio, Norte de África, Afganistán y Pakistán",1980–1989,gasto_salud_pib,100
+"Oriente Medio, Norte de África, Afganistán y Pakistán",1980–1989,gasto_publico_salud_pib,100
+"Oriente Medio, Norte de África, Afganistán y Pakistán",1980–1989,gasto_bolsillo_salud,100
+"Oriente Medio, Norte de África, Afganistán y Pakistán",1980–1989,indice_cobertura_salud,100
+"Oriente Medio, Norte de África, Afganistán y Pakistán",1990–1999,pib_per_capita_ppa,14.78
+"Oriente Medio, Norte de África, Afganistán y Pakistán",1990–1999,gasto_salud_pib,100
+"Oriente Medio, Norte de África, Afganistán y Pakistán",1990–1999,gasto_publico_salud_pib,100
+"Oriente Medio, Norte de África, Afganistán y Pakistán",1990–1999,gasto_bolsillo_salud,100
+"Oriente Medio, Norte de África, Afganistán y Pakistán",1990–1999,indice_cobertura_salud,100
+"Oriente Medio, Norte de África, Afganistán y Pakistán",2000–2009,pib_per_capita_ppa,8.7
+"Oriente Medio, Norte de África, Afganistán y Pakistán",2000–2009,gasto_salud_pib,2.17
+"Oriente Medio, Norte de África, Afganistán y Pakistán",2000–2009,gasto_publico_salud_pib,2.17
+"Oriente Medio, Norte de África, Afganistán y Pakistán",2000–2009,gasto_bolsillo_salud,2.17
+"Oriente Medio, Norte de África, Afganistán y Pakistán",2000–2009,indice_cobertura_salud,0
+"Oriente Medio, Norte de África, Afganistán y Pakistán",2010–2019,pib_per_capita_ppa,5.65
+"Oriente Medio, Norte de África, Afganistán y Pakistán",2010–2019,gasto_salud_pib,0
+"Oriente Medio, Norte de África, Afganistán y Pakistán",2010–2019,gasto_publico_salud_pib,0
+"Oriente Medio, Norte de África, Afganistán y Pakistán",2010–2019,gasto_bolsillo_salud,0
+"Oriente Medio, Norte de África, Afganistán y Pakistán",2010–2019,indice_cobertura_salud,0
+"Oriente Medio, Norte de África, Afganistán y Pakistán",2020–2025,pib_per_capita_ppa,8.7
+"Oriente Medio, Norte de África, Afganistán y Pakistán",2020–2025,gasto_salud_pib,33.33
+"Oriente Medio, Norte de África, Afganistán y Pakistán",2020–2025,gasto_publico_salud_pib,33.33
+"Oriente Medio, Norte de África, Afganistán y Pakistán",2020–2025,gasto_bolsillo_salud,33.33
+"Oriente Medio, Norte de África, Afganistán y Pakistán",2020–2025,indice_cobertura_salud,33.33
+África Subsahariana,1960–1969,pib_per_capita_ppa,100
+África Subsahariana,1960–1969,gasto_salud_pib,100
+África Subsahariana,1960–1969,gasto_publico_salud_pib,100
+África Subsahariana,1960–1969,gasto_bolsillo_salud,100
+África Subsahariana,1960–1969,indice_cobertura_salud,100
+África Subsahariana,1970–1979,pib_per_capita_ppa,100
+África Subsahariana,1970–1979,gasto_salud_pib,100
+África Subsahariana,1970–1979,gasto_publico_salud_pib,100
+África Subsahariana,1970–1979,gasto_bolsillo_salud,100
+África Subsahariana,1970–1979,indice_cobertura_salud,100
+África Subsahariana,1980–1989,pib_per_capita_ppa,100
+África Subsahariana,1980–1989,gasto_salud_pib,100
+África Subsahariana,1980–1989,gasto_publico_salud_pib,100
+África Subsahariana,1980–1989,gasto_bolsillo_salud,100
+África Subsahariana,1980–1989,indice_cobertura_salud,100
+África Subsahariana,1990–1999,pib_per_capita_ppa,4.38
+África Subsahariana,1990–1999,gasto_salud_pib,100
+África Subsahariana,1990–1999,gasto_publico_salud_pib,100
+África Subsahariana,1990–1999,gasto_bolsillo_salud,100
+África Subsahariana,1990–1999,indice_cobertura_salud,100
+África Subsahariana,2000–2009,pib_per_capita_ppa,4.17
+África Subsahariana,2000–2009,gasto_salud_pib,6.25
+África Subsahariana,2000–2009,gasto_publico_salud_pib,6.25
+África Subsahariana,2000–2009,gasto_bolsillo_salud,6.25
+África Subsahariana,2000–2009,indice_cobertura_salud,0
+África Subsahariana,2010–2019,pib_per_capita_ppa,4.17
+África Subsahariana,2010–2019,gasto_salud_pib,2.08
+África Subsahariana,2010–2019,gasto_publico_salud_pib,2.08
+África Subsahariana,2010–2019,gasto_bolsillo_salud,2.08
+África Subsahariana,2010–2019,indice_cobertura_salud,0
+África Subsahariana,2020–2025,pib_per_capita_ppa,4.17
+África Subsahariana,2020–2025,gasto_salud_pib,33.33
+África Subsahariana,2020–2025,gasto_publico_salud_pib,33.33
+África Subsahariana,2020–2025,gasto_bolsillo_salud,33.33
+África Subsahariana,2020–2025,indice_cobertura_salud,33.33

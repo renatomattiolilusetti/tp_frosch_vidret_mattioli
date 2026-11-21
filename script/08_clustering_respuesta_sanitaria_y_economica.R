@@ -2,10 +2,16 @@
 # Análisis de capacidad de respuesta
 # ==============================================================================
 
-#library(tidyverse)
-#library(FactoMineR)
-#library(factoextra)
-#library(cluster)
+# Paquetes
+library(tidyverse)
+library(FactoMineR)
+library(factoextra)
+library(cluster)
+
+# Funciones propias
+source("utils/pca_demografico.R")
+source("utils/evaluar_clusters_demograficos.R")
+source("utils/clustering_demografico.R")
 
 # Podemos armar un indicador de "capacidad de respuesta sanitaria" de cada país?
 # Qué datos tenemos en capacidad sanitaria y capacidad económica?
@@ -16,11 +22,13 @@
 # directamente por los hogares.
 # PIB_per_capita: para ver qué recursos económicos tiene para sostener esa respuesta
 
-wdi_limpia <- read_csv("repo_wdi/wdi_limpia.csv")
+# Leemos base limpia
+wdi_limpia <- read_csv("input/wdi_limpia.csv")
+
+# Preparación y construcción del PCA ####
 
 # Partimos de los 195 países trabajados anteriormente sin agregados ni territorios no
-# soberanos. Creamos una base específica para este análisis. 
-
+# soberanos. Creamos una base específica para este análisis
 base_capacidad_respuesta <- wdi_limpia |>
   filter(anio >= 2000, anio <= 2023) |>
   select(
@@ -35,13 +43,11 @@ base_capacidad_respuesta <- wdi_limpia |>
   arrange(pais, anio)
 
 # Chequeamos que el universo de países sea el adecuado
-
 base_capacidad_respuesta |>
   distinct(codigo_pais) |>
   nrow()
 
 # Miramos la cobertura de las tres variables
-
 cobertura_capacidad <- base_capacidad_respuesta |>
   group_by(anio) |>
   summarise(
@@ -76,13 +82,11 @@ cobertura_capacidad <- base_capacidad_respuesta |>
   )
 
 # Qué año nos deja más países completos?
-
 cobertura_capacidad |>
   arrange(desc(paises_capacidad_completos))
 
 # Si bien los más completos son del 2013-2021, buscamos datos actuales para responder
-# la pregunta. Entonces nos quedamos con 2023.
-
+# la pregunta. Entonces nos quedamos con 2023
 faltantes_2023 <- base_capacidad_respuesta |>
   filter(anio == 2023) |>
   mutate(
@@ -102,7 +106,6 @@ faltantes_2023 <- base_capacidad_respuesta |>
   )
 
 # Qué paises quedan afuera y cuáles son?
-
 faltantes_2023 |>
   summarise(
     total_paises = n(),
@@ -116,8 +119,7 @@ faltantes_2023 |>
 
 
 # Estos valores faltantes, qué tipo de missing son?
-# Buscamos diagnosticar su tipo:
-
+# Buscamos diagnosticar su tipo
 faltantes_2023 <- faltantes_2023 |>
   left_join(
     wdi_limpia |>
@@ -137,7 +139,6 @@ faltantes_2023 |>
   count(region, completo_capacidad)
 
 # Analizando por %
-
 faltantes_2023 |>
   group_by(ingreso) |>
   summarise(
@@ -155,17 +156,16 @@ faltantes_2023 |>
   )
 
 # El 20% de los países de ingreso bajo tienen un 20% de datos incompletos. le sigue 
-# los de ingreso medio-alto, alto y medio bajo. Segñun región, Medio Oriente tiene un
+# los de ingreso medio-alto, alto y medio bajo. Según región, Medio Oriente tiene un
 # 8,7%, seguido por Europa con un 7,5%, América Latina y Caribe, África Subsahariana
 # y Asia Oriental y Pacífico.
 
 # Identificamos que los faltantes no están perfectamente distribuidos segun región o ingreso, por ende
-# podemos identifcarlos como MAR. 
+# podemos identificarlos como MAR. 
 # Como representan solo 11 de 195 países de análisis, optaremos por trabajar con casos completos.
 # (aceptamos que podríamos tener algo de sesgo en los países de ingreso bajo)
 
-# Construimos la base para 2023:
-
+# Construimos la base para 2023
 capacidad_2023 <- base_capacidad_respuesta |>
   filter(anio == 2023) |>
   drop_na(
@@ -175,8 +175,8 @@ capacidad_2023 <- base_capacidad_respuesta |>
   )
 
 # Diagnóstico de las variables:
-# Distribución:
 
+# Distribución
 capacidad_2023 |>
   select(
     indice_cobertura_salud,
@@ -198,8 +198,7 @@ capacidad_2023 |>
   ) +
   theme_minimal()
 
-# Outliers:
-
+# Outliers
 capacidad_2023 |>
   select(
     indice_cobertura_salud,
@@ -223,10 +222,9 @@ capacidad_2023 |>
 
 # gasto_bolsillo_salud tiene una distribución aprox. normal. indice_cobertura_salud
 # Tiene una cola izquierda, pero lo dejamos en su forma original para no meternos con 
-# la lógica del índice.En cambio pib_per_capita_ppa merece transformación
+# la lógica del índice. En cambio pib_per_capita_ppa merece transformación
 
-# Identificamos los países con PIB ppa más alto:
-
+# Identificamos los países con PIB ppa más alto
 capacidad_2023 |>
   arrange(desc(pib_per_capita_ppa)) |>
   select(
@@ -235,8 +233,7 @@ capacidad_2023 |>
   ) |>
   head(15)
 
-# Detectamos los outliers del PIB con IQR:
-
+# Detectamos los outliers del PIB con IQR
 q1_pib <- quantile(capacidad_2023$pib_per_capita_ppa, 0.25)
 q3_pib <- quantile(capacidad_2023$pib_per_capita_ppa, 0.75)
 
@@ -252,15 +249,13 @@ capacidad_2023 |>
     pib_per_capita_ppa
   )
 
-# Transformamos pib a log:
-
+# Transformamos pib a log
 capacidad_2023 <- capacidad_2023 |>
   mutate(
     log_pib_per_capita = log(pib_per_capita_ppa)
   )
 
-# Comparamos antes y después:
-
+# Comparamos antes y después
 capacidad_2023 |>
   select(
     pib_per_capita_ppa,
@@ -284,16 +279,14 @@ capacidad_2023 |>
 # Logramos normalizar
 # No eliminamos los outliers, es coherente que sean ellos los de PIB genuinamente alto.
 
-# Definimos que nos quedamos con las variables:
-
+# Definimos que nos quedamos con las variables
 vars <- c(
   "indice_cobertura_salud",
   "gasto_bolsillo_salud",
   "log_pib_per_capita"
 )
 
-# Chequeamos correlación de las variables: si no había correlación no tenía sentido agrupar.
-
+# Chequeamos correlación de las variables: si no había correlación no tenía sentido agrupar
 X <- capacidad_2023 |>
   select(all_of(vars)) |>
   as.data.frame()
@@ -320,20 +313,17 @@ cor(X) |>
   ) +
   theme(axis.text.x = element_text(angle = 45, hjust = 1))
 
-# Ahora PCA:
-
+# Ahora PCA
 res <- PCA(
   X,
   scale.unit = TRUE,
   graph = FALSE
 )
 
-# Para ver información de los componentes principales:
-
+# Para ver información de los componentes principales
 res$eig
 
 # Hacemos el gráfico de scree plot
-
 fviz_eig(
   res,
   addlabels = TRUE
@@ -343,19 +333,15 @@ fviz_eig(
 # Qué variables construyen PC1 y PC2? Chequeamos correlación entre cada variable y componente.
 
 # Correlación de cada variable con PC1 y PC2
-
 res$var$coord[, 1:2]
 
 # Calidad de representación de cada variable en PC1 y PC2
-
 res$var$cos2[, 1:2]
 
 # Cuánto aporta cada variable a construir PC1 y PC2
-
 res$var$contrib[, 1:2]
 
-# Gráfico de variables y contribuciones por componente:
-
+# Gráfico de variables y contribuciones por componente
 fviz_pca_var(
   res,
   repel = TRUE,
@@ -375,8 +361,7 @@ fviz_contrib(
   axes = 2
 )
 
-# Para la interpretación de los componentes:
-
+# Para la interpretación de los componentes
 dimdesc(
   res,
   axes = 1:2
@@ -389,11 +374,10 @@ dimdesc(
 # PC1 explica el 69,7% de la variación total. PC2 el 26%. 
 
 # Decimos que PC1 representa la capacidad general de respuesta, mientras que PC2, 
-# como dimensaión adicional vinculada principalmente a cuánto recae el gasto sanitario
+# como dimensión adicional vinculada principalmente a cuánto recae el gasto sanitario
 # directamente sobre los hogares. 
 
-# Aplicamos a países:
-
+# Aplicamos a países
 fviz_pca_ind(
   res,
   repel = TRUE,
@@ -402,8 +386,7 @@ fviz_pca_ind(
   gradient.cols = c("gray80", "steelblue", "firebrick")
 )
 
-# Armamos los scores:
-
+# Armamos los scores
 scores <- as_tibble(
   res$ind$coord[, 1:3],
   rownames = "pais"
@@ -423,7 +406,6 @@ scores |>
   head(15)
 
 # Armamos biplot (Para juntar países y variables que constituyen PCA)
-
 fviz_pca_biplot(
   res,
   repel = TRUE,
@@ -435,11 +417,9 @@ fviz_pca_biplot(
 
 # Prueba de sensibilidad:
 # Guardamos el PC1 original
-
 pc1 <- res$ind$coord[, 1]
 
 # Repetimos el PCA sacando una variable por vez
-
 sensibilidad <- purrr::map_dfr(vars, function(v) {
   
   r <- PCA(
@@ -463,14 +443,14 @@ sensibilidad <- purrr::map_dfr(vars, function(v) {
 
 sensibilidad
 
-# Rubustez: en los tres casos está por encima de 0,92. Esto quiere decir que, 
+# Robustez: en los tres casos está por encima de 0,92. Esto quiere decir que, 
 # aunque saquemos cualquiera de las tres variables, el orden relativo de los países 
 # cambia muy poco.
 
-#===============================================================================
+# Aplicación ####
+
 # ¿Los países enfrentan niveles similares de envejecimiento con las mismas capacidades
-# de respuesta sanitaria y económica?
-#===============================================================================
+# de respuesta sanitaria y económica? 
 
 # Esperamos encontrar que existan países con niveles similares de envejecimiento
 # pero que presenten capacidades de respuesta diferentes.
@@ -480,45 +460,27 @@ sensibilidad
 
 # Cluster jerárquico sobre componentes principales ####
 
-pca_capacidad <- PCA(
-  X,
-  scale.unit = TRUE,
-  ncp = 2,
-  graph = FALSE
-)
+pca_capacidad <- pca_demografico(capacidad_2023, vars)$pca
 
 # Utilizamos HCPC para ver si podemos resumir los puntos en grupos
-
 hcpc <- HCPC(
   pca_capacidad,
   nb.clust = -1,
   consol = TRUE,
-  graph = TRUE
+  graph = FALSE
 )
 
-# El método sugiere 4 grupos: analizamos los grupos:
-
+# El método sugiere 4 grupos: analizamos los grupos
 table(hcpc$data.clust$clust)
 hcpc$desc.var$quanti
 
-# Chequeamos silhouette 
-# Coordenadas de los países en PC1 y PC2
+# Chequeamos silhouette. Armamos los clusters con k=4 (la cantidad que sugiere HCPC)
+# con nuestra función, que además calcula la silhouette y caracteriza los grupos
+resultado_capacidad <- clustering_demografico(pca_capacidad, capacidad_2023, vars, k = 4)
 
-coords <- pca_capacidad$ind$coord[, 1:2]
-
-# Cluster asignado por HCPC
-
-grupos <- as.integer(hcpc$data.clust$clust)
-
-# Silhouette
-
-sil <- silhouette(
-  grupos,
-  dist(coords)
-)
+sil <- resultado_capacidad$silhouette
 
 # Silhouette promedio global
-
 mean(sil[, "sil_width"])
 
 sil_resumen <- as.data.frame(sil) |>
@@ -534,33 +496,11 @@ sil_resumen <- as.data.frame(sil) |>
 
 sil_resumen
 
-# Para ver gráficamente:
-
+# Para ver gráficamente
 plot(sil)
 
 # Chequeamos si k=4 es la mejor opción
-
-sil_k <- map_dfr(2:6, function(k) {
-  
-  hcpc_k <- HCPC(
-    pca_capacidad,
-    nb.clust = k,
-    consol = TRUE,
-    graph = FALSE
-  )
-  
-  grupos_k <- as.integer(hcpc_k$data.clust$clust)
-  
-  sil_k <- silhouette(
-    grupos_k,
-    dist(coords)
-  )
-  
-  tibble(
-    k = k,
-    silhouette = mean(sil_k[, "sil_width"])
-  )
-})
+sil_k <- evaluar_clusters_demograficos(pca_capacidad, valores_k = 2:6)
 
 sil_k
 
@@ -568,24 +508,21 @@ sil_k
 # Para ver qué países quedaron en los clusters
 
 # Guardar la pertenencia de cada país a su cluster
-
-perfiles <- hcpc$data.clust |>
-  as.data.frame() |>
-  tibble::rownames_to_column("pais") |>
-  select(pais, clust)
+perfiles <- resultado_capacidad$perfiles
 
 capacidad_2023 <- capacidad_2023 |>
   left_join(perfiles, by = "pais") |>
   rename(cluster_capacidad = clust)
 
-# Verlos separados por grupo
+# Guardamos la base de capacidad con los clusters para usarla en otros scripts
+write_csv(capacidad_2023, "output/tablas/capacidad_2023_clusters.csv")
 
+# Verlos separados por grupo
 split(perfiles$pais, perfiles$clust)
 
 # Qué niveles de envejecimiento enfrentan los distintos perfiles?
 
 # Cómo se distribuye el porcentaje de poblacion +65 dentro de cada perfil?
-
 capacidad_2023 |>
   group_by(cluster_capacidad) |>
   summarise(
@@ -615,7 +552,6 @@ ggplot(
   theme_minimal()
 
 # Kruskal-wallis test
-
 kruskal.test(
   poblacion_65_mas ~ cluster_capacidad,
   data = capacidad_2023
@@ -627,11 +563,9 @@ kw <- kruskal.test(
 )
 
 # Tamaño del efecto
-
 unname(kw$statistic) / (nrow(capacidad_2023) - 1)
 
-# Confirmamos con el test que algún perfil difiere de otro, pero precisamos saber cuáles son pares:
-
+# Confirmamos con el test que algún perfil difiere de otro, pero precisamos saber cuáles son pares
 pairwise.wilcox.test(
   capacidad_2023$poblacion_65_mas,
   capacidad_2023$cluster_capacidad,
@@ -655,7 +589,6 @@ pairwise.wilcox.test(
 # Gráficos para PPT ####
 
 # Perfiles de capacidad de respuesta
-
 mapa_pca_clusters <- res$ind$coord[, 1:2] |>
   as.data.frame() |>
   rownames_to_column("pais") |>
@@ -706,12 +639,32 @@ grafico_pca_clusters <- ggplot(
 
 grafico_pca_clusters
 
-ggsave("pca_clusters.png",
+ggsave("output/graficos/pca_clusters.png",
        grafico_pca_clusters,
        width = 5, height = 3.5,
        dpi = 300, bg = "white")
 
 # Diferencias entre países 
+
+# Calculamos las medianas de los perfiles 1 y 2 y el p ajustado de su comparación,
+# para no escribirlos a mano en el subtítulo
+medianas_12 <- capacidad_2023 |>
+  filter(cluster_capacidad %in% c(1, 2)) |>
+  summarise(mediana = median(poblacion_65_mas), .by = cluster_capacidad) |>
+  arrange(cluster_capacidad)
+
+p_12 <- pairwise.wilcox.test(
+  capacidad_2023$poblacion_65_mas,
+  capacidad_2023$cluster_capacidad,
+  p.adjust.method = "holm"
+)$p.value["2", "1"]
+
+subtitulo_12 <- paste0(
+  "Medianas: ",
+  format(round(medianas_12$mediana[1], 2), decimal.mark = ","), "% vs. ",
+  format(round(medianas_12$mediana[2], 2), decimal.mark = ","), "% · p ajustado = ",
+  format(round(p_12, 2), decimal.mark = ",")
+)
 
 grafico_envejecimiento_12 <- capacidad_2023 |>
   filter(cluster_capacidad %in% c(1, 2)) |>
@@ -732,7 +685,7 @@ grafico_envejecimiento_12 <- capacidad_2023 |>
   ) +
   labs(
     title = "Envejecimiento similar, distintos perfiles",
-    subtitle = "Medianas: 3,21% vs. 3,73% · p ajustado = 0,21",
+    subtitle = subtitulo_12,
     x = "Perfil de capacidad",
     y = "Población de 65 años o más (%)"
   ) +
@@ -743,7 +696,7 @@ grafico_envejecimiento_12 <- capacidad_2023 |>
 
 grafico_envejecimiento_12
 
-ggsave("envejecimiento_similar.png",
+ggsave("output/graficos/envejecimiento_similar.png",
        grafico_envejecimiento_12,
        width = 5, height = 3.2,
        dpi = 300, bg = "white")

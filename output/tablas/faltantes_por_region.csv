@@ -1,0 +1,8 @@
+region,poblacion_total,crecimiento_poblacional,natalidad,mortalidad,migracion_neta,fecundidad,esperanza_vida,poblacion_15_64,poblacion_65_mas,pib_per_capita_ppa,gasto_salud_pib,gasto_publico_salud_pib,gasto_bolsillo_salud,indice_cobertura_salud
+América Latina y el Caribe,0,1.52,1.52,1.52,0,1.52,1.52,0,0,48.81,64.37,64.37,64.37,63.64
+América del Norte,0,1.52,1.52,1.52,0,1.52,1.52,0,0,45.45,62.88,62.88,62.88,63.64
+Asia Meridional,0,1.52,1.52,1.52,0,1.52,1.52,0,0,45.45,63.64,63.64,63.64,63.64
+Asia Oriental y Pacífico,0,1.57,1.52,1.52,0,1.52,1.52,0,0,47.27,64.9,64.95,64.9,63.64
+Europa y Asia Central,0,1.52,1.52,1.52,0,1.57,1.52,0,0,48.63,64.58,64.98,64.58,65.01
+"Oriente Medio, Norte de África, Afganistán y Pakistán",1.98,3.49,3.49,3.49,0,3.49,3.75,0,0,50.66,63.97,63.97,63.97,63.64
+África Subsahariana,0,1.55,1.52,1.52,0,1.52,1.52,0,0,47.76,64.9,64.9,64.9,63.64

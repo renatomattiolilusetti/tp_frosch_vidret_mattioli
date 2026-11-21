@@ -5,8 +5,14 @@
 library(tidyverse)
 library(gt)
 
-wdi_limpia <- read_csv("input/wdi_limpia.csv")
+# Crear las carpetas de resultados si no existen
+dir.create("output/tablas", recursive = TRUE, showWarnings = FALSE)
+dir.create("output/graficos", recursive = TRUE, showWarnings = FALSE)
 
+wdi_limpia <- read_csv(
+  "input/wdi_limpia.csv",
+  show_col_types = FALSE
+)
 
 # Verificar que cada país tenga una sola observación por año
 stopifnot(
@@ -15,7 +21,7 @@ stopifnot(
   !anyDuplicated(wdi_limpia[c("codigo_pais", "anio")])
 )
 
-# 1. Detección horizontal de outliers
+# Análisis horizontal de outliers ####
 
 # Variables relevantes para el análisis
 variables_horizontal <- c(
@@ -28,15 +34,32 @@ variables_horizontal <- c(
   "pib_per_capita_ppa",
   "gasto_bolsillo_salud",
   "gasto_publico_salud_pib",
-  "dependencia_mayor",
   "gasto_salud_pib",
   "indice_cobertura_salud"
 )
 
 # Verificar que todas las variables estén en la base
 stopifnot(
+  length(variables_horizontal) == 11,
   all(variables_horizontal %in% names(wdi_limpia))
 )
+
+# Etiquetas que utilizamos en las tablas y los gráficos
+etiquetas_variables <- c(
+  poblacion_65_mas = "Población de 65 años o más",
+  fecundidad = "Fecundidad",
+  esperanza_vida = "Esperanza de vida",
+  crecimiento_poblacional = "Crecimiento poblacional",
+  migracion_neta = "Migración neta",
+  poblacion_total = "Población total",
+  pib_per_capita_ppa = "PIB per cápita PPA",
+  gasto_bolsillo_salud = "Gasto de bolsillo en salud",
+  gasto_publico_salud_pib = "Gasto público en salud",
+  gasto_salud_pib = "Gasto total en salud",
+  indice_cobertura_salud = "Índice de cobertura de salud"
+)
+
+stopifnot(setequal(names(etiquetas_variables), variables_horizontal))
 
 # Pasar los datos a formato largo:
 # cada fila representa un país, un año y una variable
@@ -114,7 +137,6 @@ analisis_horizontal |>
   print()
 
 # Exportar los outliers detectados en la base WDI
-
 outliers_horizontales_wdi <- analisis_horizontal |>
   filter(outlier_horizontal == TRUE) |>
   select(
@@ -134,12 +156,7 @@ write_csv(
   "output/tablas/outliers_horizontales_wdi.csv"
 )
 
-print(file.exists(
-  "output/tablas/outliers_horizontales_wdi.csv"
-))
-
 # Para ver cuántos outliers hay y qué peso tienen en cada variable-año
-
 resumen_outliers_horizontal <- analisis_horizontal |>
   group_by(variable, anio) |>
   summarise(
@@ -161,7 +178,6 @@ resumen_outliers_horizontal <- analisis_horizontal |>
   )
 
 # Se repiten países muchas veces como outliers en las variables?
-
 recurrencia_outliers <- analisis_horizontal |>
   filter(outlier_horizontal == TRUE) |>
   group_by(variable, pais) |>
@@ -178,10 +194,9 @@ recurrencia_outliers <- analisis_horizontal |>
 
 # Con este análisis horizontal buscamos candidatos, es decir valores extremos en
 # determinada variable de determinado país. Pero falta ver si esos valores son coherentes
-# con las mismas dinámicas de esa variable en ese país. Ej. no es lo mismo caso 
-# Mónaco que caso país africano que no sigue una tendencia marcada.
+# con las mismas dinámicas de esa variable en ese país.
 
-# Análisis VERTICAL ####
+# Análisis vertical de outliers ####
 
 # La comparación temporal permite evaluar si los candidatos detectados
 # horizontalmente también presentan desviaciones importantes respecto
@@ -190,7 +205,6 @@ recurrencia_outliers <- analisis_horizontal |>
 
 # Solo necesitamos fijarnos en los que son outlier horizontal reconocido previamente.
 # Entonces, recortamos los candidatos.
-
 candidatos_outliers <- analisis_horizontal |>
   filter(outlier_horizontal == TRUE) |>
   select(
@@ -203,21 +217,16 @@ candidatos_outliers <- analisis_horizontal |>
   )
 
 # Cuántos candidatos quedaron?
-
 nrow(candidatos_outliers)
 
-# Cuántos por variable? 
-
+# Cuántos por variable?
 candidatos_outliers |>
   count(variable, sort = TRUE)
 
-# Tendriamos en principio 6093 observaciones marcadas como outliers. Pero pueden pertenecer
-# algunas al mismo país y a la misma variable y repetirse en distintos años. Y ademas
-# puede resultar siendo un solo caso (país-variable). 
-
-# Es decir, nos preguntamos si esas 6093 observaciones candidatas son valores genuinos
-# o posibles errores/ verdaderos valores atipicos.
-# Analizamos mismo país, misma variable --> 5 años antes y 5 años después.
+# Las observaciones candidatas pueden pertenecer al mismo país y a la misma
+# variable en distintos años. No equivalen a igual cantidad de países afectados.
+# Nos preguntamos si son extremos genuinos o posibles errores de medición.
+# Analizamos el mismo país y variable: cinco años antes y cinco después.
 
 # Identificamos el año y valor de cada candidato
 candidatos_vertical <- candidatos_outliers |>
@@ -272,7 +281,7 @@ vecinos_vertical |>
   ) |>
   print()
 
-# 3. Diagnóstico vertical de los candidatos
+# Diagnóstico vertical de los candidatos ####
 
 # Resumir los valores de los años vecinos
 diagnostico_vertical <- vecinos_vertical |>
@@ -357,7 +366,7 @@ diagnostico_vertical |>
   ) |>
   print()
 
-# 4. Clasificación de los candidatos según el diagnóstico vertical
+# Clasificación de los candidatos según el diagnóstico vertical ####
 
 diagnostico_vertical <- diagnostico_vertical |>
   mutate(
@@ -395,126 +404,75 @@ diagnostico_vertical |>
   count(clasificacion_vertical, cobertura_temporal) |>
   print(n = Inf)
 
-
 # Verificar que todos los candidatos hayan sido clasificados
 stopifnot(
   !anyNA(diagnostico_vertical$clasificacion_vertical),
   nrow(diagnostico_vertical) == nrow(candidatos_vertical)
 )
 
-# En qué variables aparecen los 334 casos que son raros tanto horizontalmente como 
-# con respecto a de la trayectoria del propio país?
-
+# ¿En qué variables aparecen las alertas fuertes, tanto horizontales como
+# respecto de la trayectoria del propio país?
 diagnostico_vertical |>
   filter(clasificacion_vertical == "Alerta fuerte: ambos criterios") |>
   count(variable, sort = TRUE)
 
-# Miramos un caso particular de alerta fuerte:
+# Miramos casos particulares de cada tipo de alerta.
+# La función evita repetir el mismo procedimiento para las tres categorías.
+mostrar_trayectoria <- function(caso) {
+  
+  if (nrow(caso) == 0) {
+    message("No hay candidatos en esta categoría.")
+    return(invisible(NULL))
+  }
+  
+  datos_horizontal |>
+    filter(
+      codigo_pais == caso$codigo_pais[[1]],
+      variable == caso$variable[[1]],
+      anio >= caso$anio_candidato[[1]] - 5,
+      anio <= caso$anio_candidato[[1]] + 5
+    ) |>
+    select(pais, variable, anio, valor) |>
+    arrange(anio) |>
+    print(n = Inf)
+}
 
+# Caso con alerta fuerte
 caso_zoom <- diagnostico_vertical |>
-  filter(
-    clasificacion_vertical == "Alerta fuerte: ambos criterios"
-  ) |>
-  arrange(z_robusto) |>
-  slice(167)
+  filter(clasificacion_vertical == "Alerta fuerte: ambos criterios") |>
+  slice_max(z_robusto, n = 1, with_ties = FALSE)
 
-caso_zoom
+print(caso_zoom)
+mostrar_trayectoria(caso_zoom)
 
-datos_horizontal |>
-  filter(
-    pais == caso_zoom$pais,
-    variable == caso_zoom$variable,
-    anio >= caso_zoom$anio_candidato - 5,
-    anio <= caso_zoom$anio_candidato + 5
-  ) |>
-  select(pais, variable, anio, valor) |>
-  arrange(anio)
-
-# Otro zoom in en el grupo "Solo fuera de rango":
-
+# Caso que solo está fuera del rango de los años vecinos
 caso_fuera_rango <- diagnostico_vertical |>
-  filter(
-    clasificacion_vertical == "Solo fuera de rango"
-  ) |>
-  arrange(z_robusto) |>
-  slice(271)
+  filter(clasificacion_vertical == "Solo fuera de rango") |>
+  slice_max(z_robusto, n = 1, with_ties = FALSE)
 
-caso_fuera_rango
+print(caso_fuera_rango)
+mostrar_trayectoria(caso_fuera_rango)
 
-datos_horizontal |>
-  filter(
-    pais == caso_fuera_rango$pais,
-    variable == caso_fuera_rango$variable,
-    anio >= caso_fuera_rango$anio_candidato - 5,
-    anio <= caso_fuera_rango$anio_candidato + 5
-  ) |>
-  select(pais, variable, anio, valor) |>
-  arrange(anio)
-
-# Otro en el grupo "Solo supera 3 MAD"
-
+# Caso que solo supera 3 MAD
 caso_mad <- diagnostico_vertical |>
-  filter(
-    clasificacion_vertical == "Solo supera 3 MAD"
-  ) |>
-  arrange(z_robusto) |>
-  slice(86)
+  filter(clasificacion_vertical == "Solo supera 3 MAD") |>
+  slice_max(z_robusto, n = 1, with_ties = FALSE)
 
-caso_mad
+print(caso_mad)
+mostrar_trayectoria(caso_mad)
 
-datos_horizontal |>
-  filter(
-    pais == caso_mad$pais,
-    variable == caso_mad$variable,
-    anio >= caso_mad$anio_candidato - 5,
-    anio <= caso_mad$anio_candidato + 5
-  ) |>
-  select(pais, variable, anio, valor) |>
-  arrange(anio)
-
-# Formamos tabla para PPT:
-
-variables_tabla <- c(
-  "Población de 65 años o más",
-  "Fecundidad",
-  "Esperanza de vida",
-  "Crecimiento poblacional",
-  "Migración neta",
-  "Población total",
-  "PIB per cápita PPA",
-  "Gasto de bolsillo en salud",
-  "Gasto público en salud",
-  "Dependencia de mayores",
-  "Gasto total en salud",
-  "Índice de cobertura de salud"
-)
+# Formamos tabla: reutilizamos las etiquetas definidas al inicio
+variables_tabla <- unname(etiquetas_variables[variables_horizontal])
 
 tabla_diagnostico_vertical <- diagnostico_vertical |>
-  
   mutate(
-    
     # Acortamos el nombre de la categoría
     clasificacion_vertical = recode(
       clasificacion_vertical,
       "Alerta fuerte: ambos criterios" = "Alerta fuerte"
     ),
-    
-    # Ponemos otros nombres a las variables
-    variable = recode(
-      variable,
-      poblacion_65_mas = "Población de 65 años o más",
-      fecundidad = "Fecundidad",
-      esperanza_vida = "Esperanza de vida",
-      crecimiento_poblacional = "Crecimiento poblacional",
-      migracion_neta = "Migración neta",
-      poblacion_total = "Población total",
-      pib_per_capita_ppa = "PIB per cápita PPA",
-      gasto_bolsillo_salud = "Gasto de bolsillo en salud",
-      gasto_publico_salud_pib = "Gasto público en salud",
-      dependencia_mayor = "Dependencia de mayores",
-      gasto_salud_pib = "Gasto total en salud",
-      indice_cobertura_salud = "Índice de cobertura de salud"
-    )
+    # Utilizar los mismos nombres descriptivos que en las tablas
+    variable = recode(variable, !!!etiquetas_variables)
   ) |>
   
   filter(
@@ -558,7 +516,6 @@ tabla_diagnostico_vertical <- diagnostico_vertical |>
   
   arrange(desc(Total))
 
-
 # Agregamos una fila TOTAL
 
 tabla_diagnostico_vertical <- tabla_diagnostico_vertical |>
@@ -573,17 +530,13 @@ tabla_diagnostico_vertical <- tabla_diagnostico_vertical |>
       )
   )
 
-# Tabla:
-
+# Tabla con etiquetas, totales y formato básico
 tabla_diagnostico_gt <- tabla_diagnostico_vertical |>
-  
   gt() |>
-  
   tab_header(
     title = "Diagnóstico vertical de outliers",
     subtitle = "Cantidad de observaciones según variable y tipo de señal"
   ) |>
-  
   cols_label(
     variable = "Variable",
     `Solo fuera de rango` = "Solo fuera de rango",
@@ -592,37 +545,10 @@ tabla_diagnostico_gt <- tabla_diagnostico_vertical |>
     `No evaluable con MAD` = "No evaluable",
     Total = "Total"
   ) |>
-  
-  cols_align(
-    align = "left",
-    columns = variable
-  ) |>
-  
-  cols_align(
-    align = "center",
-    columns = -variable
-  ) |>
-  
-  # Negrita en los nombres de columnas
+  cols_align(align = "center", columns = -variable) |>
   tab_style(
     style = cell_text(weight = "bold"),
-    locations = cells_column_labels()
-  ) |>
-  
-  # Negrita en la fila TOTAL
-  tab_style(
-    style = cell_text(weight = "bold"),
-    locations = cells_body(
-      rows = variable == "TOTAL"
-    )
-  ) |>
-  
-  tab_options(
-    heading.title.font.size = px(22),
-    heading.subtitle.font.size = px(15),
-    column_labels.font.size = px(13),
-    table.font.size = px(13),
-    data_row.padding = px(6)
+    locations = cells_body(rows = variable == "TOTAL")
   )
 
 gt::gtsave(
@@ -631,293 +557,17 @@ gt::gtsave(
   zoom = 2
 )
 
-# NA ####
+# Análisis NA ####
 
-# Recordamos las variables relevantes:
+# Los mapas de calor por región y década están en 03_analisis_exploratorio.R.
+# Aquí conservamos el seguimiento anual y el test del mecanismo de faltantes.
 
-variables_relevantes <- c(
-  "poblacion_65_mas",
-  "fecundidad",
-  "esperanza_vida",
-  "crecimiento_poblacional",
-  "migracion_neta",
-  "poblacion_total",
-  "pib_per_capita_ppa",
-  "gasto_bolsillo_salud",
-  "gasto_publico_salud_pib",
-  "dependencia_mayor",
-  "gasto_salud_pib",
-  "indice_cobertura_salud"
-)
+# Diagnóstico de NA ####
 
-# Agregamos etiquetas (para los graficos posteriores):
-
-etiquetas_variables <- c(
-  poblacion_65_mas = "Población 65+",
-  fecundidad = "Fecundidad",
-  esperanza_vida = "Esperanza de vida",
-  crecimiento_poblacional = "Crecimiento poblacional",
-  migracion_neta = "Migración neta",
-  poblacion_total = "Población total",
-  pib_per_capita_ppa = "PIB per cápita PPA",
-  gasto_bolsillo_salud = "Gasto de bolsillo en salud",
-  gasto_publico_salud_pib = "Gasto público en salud",
-  dependencia_mayor = "Dependencia de mayores",
-  gasto_salud_pib = "Gasto total en salud",
-  indice_cobertura_salud = "Índice de cobertura de salud"
-)
-
-# Evaluamos NA por décadas
-
-na_decadas_relevantes <- wdi_limpia |>
-  filter(anio >= 1960, anio <= 2025) |>
-  mutate(
-    decada = cut(
-      anio,
-      breaks = c(1960, 1970, 1980, 1990, 2000, 2010, 2020, 2026),
-      labels = c(
-        "1960–1969", "1970–1979", "1980–1989",
-        "1990–1999", "2000–2009", "2010–2019",
-        "2020–2025"
-      ),
-      right = FALSE
-    )
-  ) |>
-  group_by(decada) |>
-  summarise(
-    across(
-      all_of(variables_relevantes),
-      ~ mean(is.na(.)) * 100
-    ),
-    .groups = "drop"
-  ) |>
-  pivot_longer(
-    cols = all_of(variables_relevantes),
-    names_to = "variable",
-    values_to = "porcentaje_na"
-  ) |>
-  mutate(
-    variable = recode(variable, !!!etiquetas_variables)
-  )
-
-# Grafico para agregar a diapo: Mapa de calor de concentración de NA por variable
-# por década. 
-
-grafico_na_decadas <- ggplot(
-  na_decadas_relevantes,
-  aes(
-    x = decada,
-    y = variable,
-    fill = porcentaje_na
-  )
-) +
-  
-  geom_tile(
-    color = "white",
-    linewidth = 0.7
-  ) +
-  
-  geom_text(
-    aes(
-      label = ifelse(
-        porcentaje_na == 0,
-        "",
-        paste0(round(porcentaje_na, 1), "%")
-      )
-    ),
-    size = 3,
-    color = "#243746"
-  ) +
-  
-  scale_fill_gradient(
-    low = "#F4F7FB",
-    high = "#174A7E",
-    limits = c(0, 100),
-    name = "% de NA"
-  ) +
-  
-  labs(
-    title = "Valores faltantes a lo largo del tiempo",
-    subtitle = "Porcentaje de NA por variable y década",
-    x = NULL,
-    y = NULL
-  ) +
-  
-  theme_minimal() +
-  
-  theme(
-    panel.grid = element_blank(),
-    
-    axis.text.x = element_text(
-      size = 10,
-      color = "#3F494E"
-    ),
-    
-    axis.text.y = element_text(
-      size = 10,
-      color = "#3F494E"
-    ),
-    
-    plot.title = element_text(
-      size = 16,
-      face = "bold",
-      color = "#173A5E"
-    ),
-    
-    plot.subtitle = element_text(
-      size = 11,
-      color = "#647480"
-    ),
-    
-    legend.position = "right"
-  )
-
-
-# grafico_na_decadas
-
-ggsave(
-  "output/graficos/na_por_decada.png",
-  plot = grafico_na_decadas,
-  width = 12,
-  height = 7,
-  dpi = 300,
-  bg = "white"
-)
-
-# Mapa de calor por región
-
-na_region_relevantes <- wdi_limpia |>
-  
-  group_by(region) |>
-  
-  summarise(
-    across(
-      all_of(variables_relevantes),
-      ~ mean(is.na(.)) * 100
-    ),
-    .groups = "drop"
-  ) |>
-  
-  pivot_longer(
-    cols = all_of(variables_relevantes),
-    names_to = "variable",
-    values_to = "porcentaje_na"
-  ) |>
-  
-  mutate(
-    variable = recode(
-      variable,
-      !!!etiquetas_variables
-    )
-  )
-
-
-grafico_na_region <- ggplot(
-  na_region_relevantes,
-  aes(
-    x = region,
-    y = variable,
-    fill = porcentaje_na
-  )
-) +
-  
-  geom_tile(
-    color = "white",
-    linewidth = 0.7
-  ) +
-  
-  geom_text(
-    aes(
-      label = ifelse(
-        porcentaje_na == 0,
-        "",
-        paste0(round(porcentaje_na, 1), "%")
-      )
-    ),
-    size = 3,
-    color = "#243746"
-  ) +
-  
-  scale_fill_gradient(
-    low = "#F4F7FB",
-    high = "#174A7E",
-    limits = c(0, 100),
-    name = "% de NA"
-  ) +
-  
-  labs(
-    title = "Valores faltantes según región",
-    subtitle = "Porcentaje de NA por variable y región",
-    x = NULL,
-    y = NULL
-  ) +
-  
-  theme_minimal() +
-  
-  theme(
-    panel.grid = element_blank(),
-    
-    axis.text.x = element_text(
-      angle = 35,
-      hjust = 1,
-      size = 9,
-      color = "#3F494E"
-    ),
-    
-    axis.text.y = element_text(
-      size = 10,
-      color = "#3F494E"
-    ),
-    
-    plot.title = element_text(
-      size = 16,
-      face = "bold",
-      color = "#173A5E"
-    ),
-    
-    plot.subtitle = element_text(
-      size = 11,
-      color = "#647480"
-    ),
-    
-    legend.position = "right"
-  )
-
-
-# grafico_na_region
-
-ggsave(
-  "output/graficos/na_por_region.png",
-  plot = grafico_na_region,
-  width = 12,
-  height = 7,
-  dpi = 300,
-  bg = "white"
-)
-
-# ============================================================
-# Diagnóstico de NA: todas las variables relevantes
-# ============================================================
-
-# Seleccionamos las 12 variables de la segunda entrega
-
-variables_relevantes <- c(
-  "poblacion_total",
-  "poblacion_65_mas",
-  "pib_per_capita_ppa",
-  "migracion_neta",
-  "indice_cobertura_salud",
-  "gasto_salud_pib",
-  "gasto_publico_salud_pib",
-  "gasto_bolsillo_salud",
-  "fecundidad",
-  "esperanza_vida",
-  "dependencia_mayor",
-  "crecimiento_poblacional"
-)
+# Utilizamos los mismos indicadores que en el análisis de outliers
+variables_relevantes <- variables_horizontal
 
 # Calculamos los faltantes para cada variable y año
-
 tabla_na_anual <- wdi_limpia |>
   group_by(anio) |>
   summarise(
@@ -934,10 +584,9 @@ tabla_na_anual <- wdi_limpia |>
   )
 
 # Mostramos la tabla
-View(tabla_na_anual)
+print(tabla_na_anual)
 
 # Resumen para los años de los análisis principales
-
 tabla_na_anios_elegidos <- tabla_na_anual |>
   filter(anio %in% c(1980, 1995, 2000, 2010, 2019, 2023, 2024)) |>
   pivot_wider(
@@ -945,12 +594,9 @@ tabla_na_anios_elegidos <- tabla_na_anual |>
     values_from = cantidad_na
   )
 
-View(tabla_na_anios_elegidos)
+print(tabla_na_anios_elegidos)
 
-
-# ==============================================================================
-# Test de Little: diagnóstico del mecanismo de datos faltantes
-# ==============================================================================
+# Test de Little: diagnóstico del mecanismo de datos faltantes ####
 
 # Años relevantes para los análisis
 anios_mcar <- c(2000, 2010, 2019, 2023)
@@ -958,30 +604,70 @@ anios_mcar <- c(2000, 2010, 2019, 2023)
 # Tabla para almacenar los resultados
 resultados_little <- tibble()
 
+# El test requiere el paquete naniar y variables con variación.
+if (!requireNamespace("naniar", quietly = TRUE)) {
+  stop("Falta el paquete naniar. Instalalo con install.packages('naniar').")
+}
+
 for (anio_elegido in anios_mcar) {
   
   # Seleccionar los datos del año correspondiente
   datos_mcar <- wdi_limpia |>
     filter(anio == anio_elegido) |>
-    select(all_of(variables_relevantes))
+    select(all_of(variables_relevantes)) |>
+    # Excluir solo del test las columnas constantes o sin datos válidos.
+    select(where(~ {
+      desvio <- sd(., na.rm = TRUE)
+      is.finite(desvio) && desvio > 0
+    }))
   
-  # Estandarizar las variables
-  datos_mcar_std <- datos_mcar |>
-    mutate(
-      across(
-        everything(),
-        ~ as.numeric(scale(.))
-      )
+  if (ncol(datos_mcar) < 2 || !anyNA(datos_mcar)) {
+    # No informar un p-valor si el test no puede aplicarse.
+    resultado_anio <- tibble(
+      anio = anio_elegido,
+      statistic = NA_real_,
+      df = NA_real_,
+      p.value = NA_real_,
+      estado = "No aplicable"
     )
+  } else {
+    # Estandarizar las variables
+    datos_mcar_std <- datos_mcar |>
+      mutate(
+        across(
+          everything(),
+          ~ as.numeric(scale(.))
+        )
+      )
+    
+    # Verificar que la estandarización no alteró los NA
+    stopifnot(
+      identical(is.na(datos_mcar), is.na(datos_mcar_std))
+    )
+    
+    # Ejecutar el test de Little; si falla, dejar constancia.
+    resultado_anio <- tryCatch(
+      naniar::mcar_test(datos_mcar_std) |>
+        mutate(anio = anio_elegido, estado = "Calculado", .before = 1),
+      error = function(e) {
+        message("Test de Little (", anio_elegido, "): ", conditionMessage(e))
+        tibble(
+          anio = anio_elegido,
+          statistic = NA_real_,
+          df = NA_real_,
+          p.value = NA_real_,
+          estado = "No calculado: revisar error"
+        )
+      }
+    )
+  }
   
-  # Verificar que la estandarización no alteró los NA
-  stopifnot(
-    identical(is.na(datos_mcar), is.na(datos_mcar_std))
-  )
-  
-  # Ejecutar el test de Little
-  resultado_anio <- naniar::mcar_test(datos_mcar_std) |>
-    mutate(anio = anio_elegido, .before = 1)
+  # Registrar las variables efectivamente incluidas en cada año
+  resultado_anio <- resultado_anio |>
+    mutate(
+      cantidad_variables = ncol(datos_mcar),
+      variables_utilizadas = paste(names(datos_mcar), collapse = ", ")
+    )
   
   # Guardar el resultado de este año
   resultados_little <- bind_rows(
@@ -999,35 +685,7 @@ write_csv(
   "output/tablas/test_little.csv"
 )
 
-
-# ============================================================
-# Tabla resumen de NA por variable (1960-2025)
-# ============================================================
-
-tabla_na_total <- wdi_limpia |>
-  filter(anio >= 1960, anio <= 2025) |>
-  summarise(
-    across(
-      all_of(variables_relevantes),
-      ~ sum(is.na(.))
-    )
-  ) |>
-  pivot_longer(
-    cols = everything(),
-    names_to = "variable",
-    values_to = "cantidad_na"
-  ) |>
-  mutate(
-    total_observaciones = sum(
-      wdi_limpia$anio >= 1960 &
-        wdi_limpia$anio <= 2025,
-      na.rm = TRUE
-    ),
-    porcentaje_na = round(
-      cantidad_na / total_observaciones * 100, 2
-    )
-  ) |>
-  arrange(desc(porcentaje_na))
+# El resumen general de NA ya se guarda en 03_analisis_exploratorio.R.
 
 # Exportación de resultados
 
@@ -1035,6 +693,12 @@ tabla_na_total <- wdi_limpia |>
 write_csv(
   resumen_outliers_horizontal,
   "output/tablas/resumen_outliers_horizontal.csv"
+)
+
+# Recurrencia de outliers en cada país y variable
+write_csv(
+  recurrencia_outliers,
+  "output/tablas/recurrencia_outliers.csv"
 )
 
 # Diagnóstico vertical: todos los candidatos y sus criterios
@@ -1055,19 +719,16 @@ write_csv(
   "output/tablas/na_anios_elegidos.csv"
 )
 
-# Datos faltantes: resumen general
-write_csv(
-  tabla_na_total,
-  "output/tablas/na_resumen_general.csv"
-)
-
 # Verificar que todos los archivos se guardaron
 archivos_resultados <- c(
+  "output/tablas/outliers_horizontales_wdi.csv",
+  "output/tablas/recurrencia_outliers.csv",
+  "output/tablas/tabla_diagnostico_outliers.png",
+  "output/tablas/test_little.csv",
   "output/tablas/resumen_outliers_horizontal.csv",
   "output/tablas/diagnostico_vertical_completo.csv",
   "output/tablas/na_por_anio.csv",
-  "output/tablas/na_anios_elegidos.csv",
-  "output/tablas/na_resumen_general.csv"
+  "output/tablas/na_anios_elegidos.csv"
 )
 
 stopifnot(all(file.exists(archivos_resultados)))
