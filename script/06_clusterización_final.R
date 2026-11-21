@@ -1,18 +1,25 @@
 # ==============================================================================
-# Clusterización Final - cluster discreto para cada año
+# Clusterización final: cluster continuo 1961-2024 y clusters por año (1961 y 1970)
 # ==============================================================================
 
 # Paquetes 
 
 library(tidyverse)
 library(FactoMineR)
-library(factoextra)
 library(cluster)
 library(zoo)
+library(gt)
+
+# Funciones propias
+
+source("utils/pca_demografico.R")
+source("utils/evaluar_clusters_demograficos.R")
+source("utils/clustering_demografico.R")
+source("utils/theme_tp.R")
 
 # Partimos de la base limpia
 
-wdi_limpia <- read_csv("repo_wdi/wdi_limpia.csv")
+wdi_limpia <- read_csv("input/wdi_limpia.csv")
 
 # Intro: preparación ####
 # Retomamos las variables de interés para armar los clusters
@@ -201,6 +208,10 @@ base_demo <- wdi_limpia |>
 base_demo |>
   summarise(across(all_of(vars_demograficas), ~ sum(is.na(.x))))
 
+# Guardamos la base interpolada para usarla en otros scripts
+
+write_csv(base_demo, "output/tablas/base_demo_interpolada.csv")
+
 # Vemos resultados de la imputación:
 
 wdi_limpia |>
@@ -342,6 +353,10 @@ demo_cluster <- demo_cluster |>
     )
   )
 
+# Guardamos la clasificación país-año del cluster continuo
+
+write_csv(demo_cluster, "output/tablas/demo_cluster_continuo.csv")
+
 # Ver cómo cambia la cantidad de países en cada perfil a través de los años
 
 demo_cluster |>
@@ -369,9 +384,9 @@ trayectorias |>
   count(perfil_inicial, perfil_final, cambios)
 
 # Resumimos las trayectorias en cuatro categorías: permanencia, transición única 
-# hacia el perfil avanzado y recorridos no lineales.
+# hacia el perfil avanzado y recorridos no lineales. Ahora lo guardamos para usarlo después
 
-trayectorias |>
+trayectorias <- trayectorias |>
   mutate(
     tipo = case_when(
       cambios == 0 & perfil_inicial == "Joven y expansivo" ~ "Siempre joven",
@@ -380,8 +395,16 @@ trayectorias |>
         perfil_final == "Transición avanzada" ~ "Transición joven a avanzado",
       TRUE ~ "Trayectoria no lineal"
     )
-  ) |>
+  )
+
+trayectorias |>
   count(tipo, sort = TRUE)
+
+# Guardamos los países que hicieron una única transición de joven a avanzado
+
+paises_transicion <- trayectorias |>
+  filter(tipo == "Transición joven a avanzado") |>
+  pull(pais)
 
 # Identificamos el primer año en que cada país con transición limpia
 # pasa del perfil joven y expansivo al perfil de transición avanzada.
@@ -436,18 +459,7 @@ datos_1970 <- base_demo |>
 # Construimos el PCA de 1961 con las mismas cuatro variables y la misma estandarización
 # utilizada en los otros momentos temporales.
 
-X_1961 <- datos_1961 |>
-  select(all_of(vars_demograficas)) |>
-  as.data.frame()
-
-rownames(X_1961) <- datos_1961$pais
-
-pca_1961 <- PCA(
-  X_1961,
-  scale.unit = TRUE,
-  ncp = 2,
-  graph = FALSE
-)
+pca_1961 <- pca_demografico(datos_1961, vars_demograficas)$pca
 
 pca_1961$eig
 pca_1961$var$coord[, 1:2]
@@ -455,44 +467,13 @@ pca_1961$var$contrib[, 1:2]
 
 # Comparamos distintas cantidades de clusters en 1961 mediante silhouette promedio.
 
-coords_1961 <- pca_1961$ind$coord[, 1:2]
-
-silhouette_1961 <- map_dfr(2:10, \(k) {
-  
-  hcpc_k <- HCPC(
-    pca_1961,
-    nb.clust = k,
-    consol = TRUE,
-    graph = FALSE
-  )
-  
-  grupos_k <- as.integer(hcpc_k$data.clust$clust)
-  
-  tibble(
-    k = k,
-    silhouette_promedio = mean(
-      silhouette(grupos_k, dist(coords_1961))[, "sil_width"]
-    ),
-    grupo_mas_chico = min(table(grupos_k))
-  )
-})
+silhouette_1961 <- evaluar_clusters_demograficos(pca_1961)
 
 silhouette_1961
 
 # Repetimos el mismo PCA para 1970.
 
-X_1970 <- datos_1970 |>
-  select(all_of(vars_demograficas)) |>
-  as.data.frame()
-
-rownames(X_1970) <- datos_1970$pais
-
-pca_1970 <- PCA(
-  X_1970,
-  scale.unit = TRUE,
-  ncp = 2,
-  graph = FALSE
-)
+pca_1970 <- pca_demografico(datos_1970, vars_demograficas)$pca
 
 pca_1970$eig
 pca_1970$var$coord[, 1:2]
@@ -500,67 +481,17 @@ pca_1970$var$contrib[, 1:2]
 
 # Comparamos distintas cantidades de clusters en 1970.
 
-coords_1970 <- pca_1970$ind$coord[, 1:2]
-
-silhouette_1970 <- map_dfr(2:10, \(k) {
-  
-  hcpc_k <- HCPC(
-    pca_1970,
-    nb.clust = k,
-    consol = TRUE,
-    graph = FALSE
-  )
-  
-  grupos_k <- as.integer(hcpc_k$data.clust$clust)
-  
-  tibble(
-    k = k,
-    silhouette_promedio = mean(
-      silhouette(grupos_k, dist(coords_1970))[, "sil_width"]
-    ),
-    grupo_mas_chico = min(table(grupos_k))
-  )
-})
+silhouette_1970 <- evaluar_clusters_demograficos(pca_1970)
 
 silhouette_1970
 
 # Con k=3, el grupo más chico tiene 3 países en 1961 y 4 en 1970. En cambio, con k=2,
 # el grupo más chico tiene 53 y 61 países. Entonces, nos quedamos con k=2 en ambos años.
 
-# Fijamos dos clusters en 1961 y 1970.
+# Fijamos dos clusters en 1961 y 1970 y le asociamos a cada país su cluster.
 
-hcpc_1961_k2 <- HCPC(
-  pca_1961,
-  nb.clust = 2,
-  consol = TRUE,
-  graph = FALSE
-)
-
-hcpc_1970_k2 <- HCPC(
-  pca_1970,
-  nb.clust = 2,
-  consol = TRUE,
-  graph = FALSE
-)
-
-# Asociamos el cluster a cada país y resumimos las características promedio
-# de los dos perfiles en 1961 y 1970.
-
-perfiles_1961 <- hcpc_1961_k2$data.clust |>
-  as.data.frame() |>
-  rownames_to_column("pais") |>
-  select(pais, clust)
-
-perfiles_1970 <- hcpc_1970_k2$data.clust |>
-  as.data.frame() |>
-  rownames_to_column("pais") |>
-  select(pais, clust)
-
-datos_1961_cluster <- datos_1961 |>
-  left_join(perfiles_1961, by = "pais")
-
-datos_1970_cluster <- datos_1970 |>
-  left_join(perfiles_1970, by = "pais")
+datos_1961_cluster <- clustering_demografico(pca_1961, datos_1961, vars_demograficas)$datos_cluster
+datos_1970_cluster <- clustering_demografico(pca_1970, datos_1970, vars_demograficas)$datos_cluster
 
 # Caracterizamos los dos clusters de cada año para identificar cuál corresponde
 # al perfil joven y cuál al perfil de transición avanzada.
@@ -591,7 +522,7 @@ datos_1970_cluster |>
 # para integrarla con los nuevos cortes de 1961 y 1970.
 
 perfiles_1980_2024 <- read_csv(
-  "auxiliar/perfiles_clusters_1980_2024.csv"
+  "output/tablas/perfiles_clusters_1980_2024.csv"
 )
 
 # Caracterizamos los clusters de 1961 y 1970 con las mismas variables utilizadas en 
@@ -636,5 +567,245 @@ evolucion_perfiles <- bind_rows(
 
 evolucion_perfiles
 
+# Guardamos la evolución de los perfiles en los seis momentos
+
+write_csv(evolucion_perfiles, "output/tablas/evolucion_perfiles.csv")
+
 # Gráficos ####
 
+# Gráfico comparativo de las trayectorias (1961 contra 2024) ####
+
+# Nos quedamos con 1961 y 2024 y armamos una categoría que combine perfil y año,
+
+antes_despues <- evolucion_perfiles |>
+  filter(anio %in% c(1961, 2024)) |>
+  mutate(
+    perfil = if_else(clust == 1, "Perfil joven", "Perfil avanzado"),
+    perfil = factor(perfil, levels = c("Perfil joven", "Perfil avanzado")),
+    grupo = paste(perfil, anio),
+    grupo = factor(
+      grupo,
+      levels = c(
+        "Perfil joven 1961",
+        "Perfil joven 2024",
+        "Perfil avanzado 1961",
+        "Perfil avanzado 2024"
+      )
+    )
+  ) |>
+  select(perfil, anio, grupo, fecundidad, esperanza_vida, poblacion_65_mas, crecimiento_poblacional) |>
+  pivot_longer(
+    c(fecundidad, esperanza_vida, poblacion_65_mas, crecimiento_poblacional),
+    names_to = "variable",
+    values_to = "valor"
+  ) |>
+  mutate(
+    variable = recode(
+      variable,
+      fecundidad = "Fecundidad (hijos por mujer)",
+      esperanza_vida = "Esperanza de vida (años)",
+      poblacion_65_mas = "Población de 65+ (% del total)",
+      crecimiento_poblacional = "Crecimiento poblacional (% anual)"
+    ),
+    variable = factor(
+      variable,
+      levels = c(
+        "Fecundidad (hijos por mujer)",
+        "Esperanza de vida (años)",
+        "Población de 65+ (% del total)",
+        "Crecimiento poblacional (% anual)"
+      )
+    ),
+    etiqueta = format(round(valor, 1), decimal.mark = ",", nsmall = 1, trim = TRUE)
+  )
+
+# Chequeamos los números
+
+antes_despues
+
+# Claro = 1961, oscuro = 2024, con los mismos azul y naranja de los otros gráficos
+
+colores_antes_despues <- c(
+  "Perfil joven 1961" = "#8CC2E6",
+  "Perfil joven 2024" = "#0072B2",
+  "Perfil avanzado 1961" = "#F2CF80",
+  "Perfil avanzado 2024" = "#E69F00"
+)
+
+grafico_antes_despues <- ggplot(antes_despues, aes(x = perfil, y = valor, fill = grupo)) +
+  geom_col(
+    position = position_dodge(width = 0.8),
+    width = 0.75
+  ) +
+  geom_text(
+    aes(label = etiqueta),
+    position = position_dodge(width = 0.8),
+    vjust = -0.5, size = 3.6, fontface = "bold", color = "#19354D"
+  ) +
+  facet_wrap(~ variable, nrow = 2, scales = "free_y") +
+  scale_fill_manual(values = colores_antes_despues, name = NULL) +
+  scale_y_continuous(
+    labels = scales::label_number(decimal.mark = ","),
+    expand = expansion(mult = c(0, 0.15))
+  ) +
+  guides(fill = guide_legend(nrow = 1)) +
+  labs(
+    title = "Comparación de las características de las trayectorias:\nsituación del perfil joven y del avanzado en 1961 contra 2024",
+    subtitle = "Promedio de cada perfil en 1961 y en 2024",
+    x = NULL,
+    y = NULL,
+    caption = "Fuente: Banco Mundial (WDI). Elaboración propia."
+  ) +
+  theme_tp() +
+  theme(
+    strip.text = element_text(
+      face = "bold", color = "#19354D", size = 11.5,
+      margin = margin(b = 6)
+    ),
+    panel.spacing.x = unit(20, "pt"),
+    panel.spacing.y = unit(14, "pt"),
+    axis.text.x = element_text(color = "#19354D", size = 11, face = "bold"),
+    axis.text.y = element_text(color = "#677887", size = 9.5),
+    legend.text = element_text(size = 10.5, color = "#38536B")
+  )
+
+grafico_antes_despues
+
+# Lo guardamos.
+
+ggsave(
+  filename = "output/graficos/comparacion_caracteristicas_de_las_trayectorias.jpg",
+  plot = grafico_antes_despues,
+  width = 24,
+  height = 17,
+  units = "cm",
+  dpi = 300,
+  bg = "white",
+  quality = 95
+)
+
+# Gráfico 2: cambios en la pertenencia al grupo ####
+
+# Contamos cuántos países hay en cada perfil en cada año y lo pasamos a porcentaje
+
+composicion <- demo_cluster |>
+  count(anio, perfil) |>
+  mutate(
+    pct = n / sum(n) * 100,
+    .by = anio
+  )
+
+# Buscamos el año desde el cual los avanzados son mayoría y no dejan de serlo
+
+mayoria_avanzada <- composicion |>
+  filter(perfil == "Transición avanzada") |>
+  arrange(anio) |>
+  mutate(mayoria = pct > 50)
+
+anio_cruce <- max(mayoria_avanzada$anio[!mayoria_avanzada$mayoria]) + 1
+
+anio_cruce
+
+colores_perfil <- c(
+  "Joven y expansivo" = "#0072B2",
+  "Transición avanzada" = "#E69F00"
+)
+
+grafico_evolucion_perfiles <- ggplot(composicion, aes(x = anio, y = pct, color = perfil)) +
+  geom_hline(yintercept = 50, color = "#B9C6D0", linewidth = 0.4, linetype = "dashed") +
+  geom_vline(xintercept = anio_cruce, color = "#19354D", linewidth = 0.5) +
+  geom_line(linewidth = 1.4) +
+  annotate(
+    "text", x = anio_cruce + 1, y = 95,
+    label = paste0(anio_cruce, ": los avanzados\npasan a ser mayoría"),
+    hjust = 0, vjust = 1, size = 3.8, fontface = "bold",
+    color = "#19354D", lineheight = 1.05
+  ) +
+  scale_color_manual(
+    values = colores_perfil,
+    labels = c("Perfil demográfico joven", "Transición avanzada"),
+    name = NULL
+  ) +
+  scale_x_continuous(breaks = c(1961, 1970, 1980, 1990, 2000, 2010, 2024)) +
+  scale_y_continuous(
+    limits = c(0, 100),
+    breaks = seq(0, 100, 25),
+    labels = \(x) paste0(x, "%"),
+    expand = c(0, 0)
+  ) +
+  labs(
+    title = paste0("Perfiles comparados: desde ", anio_cruce, " la mayoría de los países\nse asocia con el perfil de transición avanzada"),
+    subtitle = "Porcentaje de países en cada perfil, 1961-2024",
+    x = NULL,
+    y = "Países (%)",
+    caption = "Fuente: Banco Mundial (WDI). Elaboración propia. Perfiles: PCA y cluster jerárquico comunes a todo el período."
+  ) +
+  theme_tp() +
+  theme(
+    axis.text = element_text(color = "#677887", size = 10),
+    axis.title.y = element_text(color = "#38536B", size = 10.5, margin = margin(r = 8)),
+    axis.line.x = element_line(color = "#B9C6D0", linewidth = 0.4),
+    legend.key.width = unit(1, "cm")
+  )
+
+grafico_evolucion_perfiles
+
+ggsave(
+  filename = "output/graficos/perfiles_clusters_comparados.jpg",
+  plot = grafico_evolucion_perfiles,
+  width = 24,
+  height = 14,
+  units = "cm",
+  dpi = 300,
+  bg = "white",
+  quality = 95
+)
+
+# Tabla de la evolución de los perfiles con los seis momentos ####
+
+tabla_evolucion <- evolucion_perfiles |>
+  select(anio, clust, n, poblacion_65_mas, fecundidad, esperanza_vida, crecimiento_poblacional) |>
+  rename(
+    `Año` = anio,
+    `Cluster` = clust,
+    `Países` = n,
+    `Población 65+ (%)` = poblacion_65_mas,
+    `Fecundidad` = fecundidad,
+    `Esperanza de vida` = esperanza_vida,
+    `Crecimiento (%)` = crecimiento_poblacional
+  ) |>
+  gt() |>
+  fmt_number(
+    columns = c(
+      `Población 65+ (%)`,
+      `Fecundidad`,
+      `Esperanza de vida`,
+      `Crecimiento (%)`
+    ),
+    decimals = 2
+  ) |>
+  tab_header(
+    title = "Evolución de los perfiles demográficos",
+    subtitle = "Características promedio de los clusters"
+  ) |>
+  cols_align(
+    align = "center"
+  ) |>
+  tab_style(
+    style = cell_text(weight = "bold"),
+    locations = cells_column_labels()
+  ) |>
+  tab_options(
+    table.font.size = px(12),
+    heading.title.font.size = px(16),
+    heading.subtitle.font.size = px(11),
+    data_row.padding = px(4)
+  )
+
+tabla_evolucion
+
+gtsave(
+  tabla_evolucion,
+  "output/tablas/tabla_evolucion_perfiles.png",
+  zoom = 2
+)

@@ -700,7 +700,7 @@ perfiles_comparados |>
       "Transición avanzada"
     )
   ) |>
-  write_csv("auxiliar/perfiles_clusters_1980_2024.csv")
+  write_csv("output/tablas/perfiles_clusters_1980_2024.csv")
 
 # Prueba de sensibilidad (sin outliers) ####
 
