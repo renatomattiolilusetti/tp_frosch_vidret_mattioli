@@ -532,7 +532,8 @@ tabla_diagnostico_gt <- tabla_diagnostico_vertical |>
   tab_style(
     style = cell_text(weight = "bold"),
     locations = cells_body(rows = variable == "TOTAL")
-  )
+  ) |>
+  tab_source_note(source_note = "Fuente: Banco Mundial (WDI). Elaboración propia.")
 
 gt::gtsave(
   tabla_diagnostico_gt,

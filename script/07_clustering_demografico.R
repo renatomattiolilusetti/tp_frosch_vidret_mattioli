@@ -1031,7 +1031,8 @@ grafico_silhouette <- ggplot(
   labs(
     title = "Calidad de la solución de dos clusters",
     x = NULL,
-    y = "Silhouette media"
+    y = "Silhouette media",
+    caption = "Fuente: Banco Mundial (WDI). Elaboración propia."
   ) +
   ylim(0, 0.62) +
   theme_minimal(base_size = 10) +
@@ -1113,7 +1114,8 @@ grafico_correlaciones <- ggplot(
     subtitle = "Ejemplo: 2024",
     x = NULL,
     y = NULL,
-    fill = "r"
+    fill = "r",
+    caption = "Fuente: Banco Mundial (WDI). Elaboración propia."
   ) +
   coord_fixed() +
   theme_minimal(base_size = 9) +
@@ -1175,6 +1177,7 @@ tabla_trayectorias <- trayectorias_resumen |>
     style = cell_text(weight = "bold"),
     locations = cells_column_labels()
   ) |>
+  tab_source_note(source_note = "Fuente: Banco Mundial (WDI). Elaboración propia.") |>
   tab_options(
     table.font.size = px(13),
     heading.title.font.size = px(16),
@@ -1222,6 +1225,7 @@ tabla_perfiles <- perfiles_comparados |>
     style = cell_text(weight = "bold"),
     locations = cells_column_labels()
   ) |>
+  tab_source_note(source_note = "Fuente: Banco Mundial (WDI). Elaboración propia.") |>
   tab_options(
     table.font.size = px(12),
     heading.title.font.size = px(16),
@@ -1270,7 +1274,8 @@ grafico_evolucion_clusters <- ggplot(
     subtitle = "Cantidad de países por cluster",
     x = NULL,
     y = "Países",
-    fill = NULL
+    fill = NULL,
+    caption = "Fuente: Banco Mundial (WDI). Elaboración propia."
   ) +
   theme_minimal(base_size = 10) +
   theme(
@@ -1383,6 +1388,7 @@ tabla_silhouette_clusters <- silhouette_clusters |>
   tab_source_note(
     source_note = "Una silhouette negativa indica que un país está más próximo al otro cluster que al cluster al que fue asignado."
   ) |>
+  tab_source_note(source_note = "Fuente: Banco Mundial (WDI). Elaboración propia.") |>
   tab_options(
     table.font.size = px(12),
     heading.title.font.size = px(16),

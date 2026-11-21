@@ -10,6 +10,9 @@ library(scales)
 source("utils/guardar_grafico.R")
 source("utils/tema_estandar.R")
 
+# Fijar semilla: los puntos con jitter de los gráficos quedan siempre iguales
+set.seed(42)
+
 # Paleta Okabe-Ito para los 5 quintiles (de menor a mayor carga demográfica)
 paleta_quintiles <- c(
   "Q1 (Baja)"       = "#56B4E9",
@@ -116,65 +119,6 @@ print(outliers_gasto)
 
 # Visualización ####
 
-# Gráfico de Barras con Promedios y Observaciones
-promedios <- df_quintiles %>%
-  group_by(quintil_DM) %>%
-  summarise(
-    prom_salud = mean(gasto_salud_pib),
-    n = n(),
-    .groups = "drop"
-  )
-
-y_max_barras <- max(c(df_quintiles$gasto_salud_pib, promedios$prom_salud), na.rm = TRUE) * 1.12
-
-grafico_barras <- ggplot() +
-  geom_col(
-    data = promedios,
-    aes(x = quintil_DM, y = prom_salud, fill = quintil_DM),
-    width = 0.56,
-    color = "#222222",
-    linewidth = 0.4,
-    alpha = 0.88
-  ) +
-  geom_jitter(
-    data = df_quintiles,
-    aes(x = quintil_DM, y = gasto_salud_pib),
-    width = 0.14,
-    alpha = 0.45,
-    size = 1.7,
-    color = "#1B1B1B"
-  ) +
-  geom_text(
-    data = promedios,
-    aes(x = quintil_DM, y = prom_salud, label = sprintf("%.1f%%", prom_salud)),
-    vjust = -0.6,
-    fontface = "bold",
-    size = 3.6,
-    color = "#111111"
-  ) +
-  scale_fill_manual(values = paleta_quintiles) +
-  scale_x_discrete(labels = function(x) paste0(x, "\n(n=", promedios$n[match(x, promedios$quintil_DM)], ")")) +
-  scale_y_continuous(
-    limits = c(0, ceiling(y_max_barras / 2) * 2),
-    breaks = seq(0, ceiling(y_max_barras / 2) * 2, by = 2),
-    labels = function(y) paste0(y, "%"),
-    expand = expansion(mult = c(0, 0.04))
-  ) +
-  labs(
-    title = "Gasto promedio en salud aumenta con la tasa de dependencia mayor",
-    subtitle = paste0(
-      "Promedio y distribución por quintil de dependencia mayor en 2019 (N = ",
-      nrow(df_quintiles), " países; ANOVA \u03B7\u00B2 = ", sprintf("%.2f", eta_cuadrado), ")"
-    ),
-    x = "Quintiles de Tasa de Dependencia Mayor (2019)",
-    y = "Gasto en salud (% del PIB)",
-    caption = "Fuente: Elaboración propia en base a World Development Indicators (WDI, 2019). Puntos: países observados; etiquetas: promedio del quintil."
-  ) +
-  tema_estandar(base_size = 11)
-
-print(grafico_barras)
-guardar_grafico(grafico_barras, "quintiles_dm_gasto_salud_barras_2019.jpg", ancho = 10, alto = 6.5)
-
 # Generación del Boxplot solo con los puntos de outliers
 grafico_boxplot <- ggplot(df_quintiles, aes(x = quintil_DM, y = gasto_salud_pib, fill = quintil_DM)) +
   geom_boxplot(
@@ -228,9 +172,9 @@ paises_agrupados_pib <- df_quintiles_con_pib %>%
   select(quintil_DM, pais, dep_mayor_2019, gasto_salud_pib, pib_per_capita_ppa) %>%
   arrange(quintil_DM, desc(dep_mayor_2019))
 
-# Gráfico de barras (gasto en salud por quintil de dependencia mayor para 2019)
+# Gráfico de barras: gasto en salud por quintil de dependencia mayor (2019)
 
-# Colores originales del gráfico de referencia
+# Colores del gráfico de barras
 colores_barras_quintiles <- c(
   "Q1 (Baja)"       = "#2b5c8f",
   "Q2 (Media-Baja)" = "#4682b4",

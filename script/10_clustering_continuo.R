@@ -15,6 +15,13 @@ source("utils/evaluar_clusters_demograficos.R")
 source("utils/clustering_demografico.R")
 source("utils/theme_tp.R")
 
+# Fijar semilla: HCPC con kk = 500 arranca con un k-means, que es aleatorio
+set.seed(42)
+
+# Crear las carpetas de resultados si no existen
+dir.create("output/tablas", recursive = TRUE, showWarnings = FALSE)
+dir.create("output/graficos", recursive = TRUE, showWarnings = FALSE)
+
 # Partimos de la base limpia
 wdi_limpia <- read_csv("input/wdi_limpia.csv")
 
@@ -755,6 +762,7 @@ tabla_evolucion <- evolucion_perfiles |>
     style = cell_text(weight = "bold"),
     locations = cells_column_labels()
   ) |>
+  tab_source_note(source_note = "Fuente: Banco Mundial (WDI). Elaboración propia.") |>
   tab_options(
     table.font.size = px(12),
     heading.title.font.size = px(16),

@@ -13,6 +13,13 @@ source("utils/pca_demografico.R")
 source("utils/evaluar_clusters_demograficos.R")
 source("utils/clustering_demografico.R")
 
+# Fijar semilla: los puntos con jitter de los gráficos quedan siempre iguales
+set.seed(42)
+
+# Crear las carpetas de resultados si no existen
+dir.create("output/tablas", recursive = TRUE, showWarnings = FALSE)
+dir.create("output/graficos", recursive = TRUE, showWarnings = FALSE)
+
 # Podemos armar un indicador de "capacidad de respuesta sanitaria" de cada país?
 # Qué datos tenemos en capacidad sanitaria y capacidad económica?
 # Variables:
@@ -629,7 +636,8 @@ grafico_pca_clusters <- ggplot(
     subtitle = "Países según los dos primeros componentes principales",
     x = "PC1 · Capacidad general",
     y = "PC2 · Dimensión asociada al gasto de bolsillo",
-    color = "Perfil"
+    color = "Perfil",
+    caption = "Fuente: Banco Mundial (WDI). Elaboración propia."
   ) +
   theme_minimal(base_size = 10) +
   theme(
@@ -687,7 +695,8 @@ grafico_envejecimiento_12 <- capacidad_2023 |>
     title = "Envejecimiento similar, distintos perfiles",
     subtitle = subtitulo_12,
     x = "Perfil de capacidad",
-    y = "Población de 65 años o más (%)"
+    y = "Población de 65 años o más (%)",
+    caption = "Fuente: Banco Mundial (WDI). Elaboración propia."
   ) +
   theme_minimal(base_size = 10) +
   theme(
