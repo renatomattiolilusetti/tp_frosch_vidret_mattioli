@@ -1435,7 +1435,7 @@ archivos_generados <- c(
   "output/graficos/correlaciones_2024.png",
   "output/graficos/evolucion_clusters.png",
   "output/graficos/silhouette_por_cluster.png",
-  "auxiliar/perfiles_clusters_1980_2024.csv",
+  "output/tablas/perfiles_clusters_1980_2024.csv",
   "auxiliar/base_cluster_demografico_cortes.csv"
 )
 

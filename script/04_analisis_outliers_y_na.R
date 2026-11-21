@@ -935,7 +935,7 @@ tabla_na_anual <- wdi_limpia |>
   )
 
 # Mostramos la tabla
-View(tabla_na_anual)
+print(tabla_na_anual)
 
 # Resumen para los años de los análisis principales
 
@@ -946,7 +946,7 @@ tabla_na_anios_elegidos <- tabla_na_anual |>
     values_from = cantidad_na
   )
 
-View(tabla_na_anios_elegidos)
+print(tabla_na_anios_elegidos)
 
 
 # ==============================================================================

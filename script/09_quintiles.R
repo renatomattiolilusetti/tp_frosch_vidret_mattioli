@@ -246,7 +246,7 @@ paises_agrupados <- df_quintiles %>%
   select(quintil_DM, pais, dep_mayor_2019, gasto_salud_pib) %>%
   arrange(quintil_DM, pais)
 
-View(paises_agrupados)
+print(paises_agrupados)
 
 # Extraer el PIB per cápita PPA de 2019 desde la base limpia
 datos_pib_2019 <- wdi_limpia %>%
