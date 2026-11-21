@@ -8,7 +8,7 @@
 - Dolores Frosch
 - Renato Mattioli
 - Julieta Vidret
-- 
+
 ## Objetivo e hipótesis de trabajo
 
 El proyecto estudia la transición demográfica hacia estructuras poblacionales más envejecidas y su relación con las condiciones económicas y sanitarias de los países. Buscamos responder dos preguntas relacionadas: **¿se observan patrones comunes en las trayectorias de envejecimiento?** y **¿países con niveles similares de envejecimiento presentan distintas capacidades económicas y sanitarias para afrontarlo?**
