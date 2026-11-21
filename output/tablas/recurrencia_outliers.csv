@@ -1,0 +1,280 @@
+variable,pais,cantidad_anios_outlier,primer_anio_outlier,ultimo_anio_outlier
+crecimiento_poblacional,Qatar,39,1961,2024
+crecimiento_poblacional,United Arab Emirates,38,1968,2025
+crecimiento_poblacional,Kuwait,29,1961,2023
+crecimiento_poblacional,Andorra,21,1961,2011
+crecimiento_poblacional,Djibouti,20,1964,1991
+crecimiento_poblacional,Equatorial Guinea,14,1971,2004
+crecimiento_poblacional,Jordan,12,1965,2015
+crecimiento_poblacional,Bahrain,11,1991,2017
+crecimiento_poblacional,Marshall Islands,11,1968,2025
+crecimiento_poblacional,Cambodia,10,1975,1997
+crecimiento_poblacional,Saudi Arabia,10,1979,2025
+crecimiento_poblacional,St. Kitts and Nevis,10,1961,1970
+crecimiento_poblacional,Afghanistan,8,1980,2003
+crecimiento_poblacional,Guinea-Bissau,7,1964,1978
+crecimiento_poblacional,Oman,7,1985,2023
+crecimiento_poblacional,Liberia,6,1990,2006
+crecimiento_poblacional,Libya,6,1975,2012
+crecimiento_poblacional,Kosovo,5,1998,2024
+crecimiento_poblacional,"Somalia, Fed. Rep.",5,1978,1992
+crecimiento_poblacional,Syrian Arab Republic,5,2007,2023
+crecimiento_poblacional,Georgia,4,1995,1998
+crecimiento_poblacional,Lebanon,4,2013,2019
+crecimiento_poblacional,Rwanda,4,1994,1997
+crecimiento_poblacional,Timor-Leste,4,1999,2002
+crecimiento_poblacional,Bosnia and Herzegovina,3,1992,1994
+crecimiento_poblacional,Eritrea,3,1991,1995
+crecimiento_poblacional,Moldova,3,2022,2024
+crecimiento_poblacional,Singapore,3,2008,2023
+crecimiento_poblacional,South Sudan,3,1989,2017
+crecimiento_poblacional,Bhutan,2,1992,1993
+crecimiento_poblacional,Botswana,2,1978,1979
+crecimiento_poblacional,Burundi,2,1993,1995
+crecimiento_poblacional,Croatia,2,1992,2001
+crecimiento_poblacional,Kazakhstan,2,1997,1998
+crecimiento_poblacional,Mozambique,2,1994,1995
+crecimiento_poblacional,Namibia,2,1989,1990
+crecimiento_poblacional,Naoero,2,1964,1965
+crecimiento_poblacional,Serbia,2,1991,2022
+crecimiento_poblacional,Sierra Leone,2,2001,2002
+crecimiento_poblacional,Ukraine,2,2022,2023
+crecimiento_poblacional,"Venezuela, RB",2,2018,2019
+crecimiento_poblacional,Armenia,1,1993,1993
+crecimiento_poblacional,Chad,1,2024,2024
+crecimiento_poblacional,China,1,1961,1961
+crecimiento_poblacional,Estonia,1,1993,1993
+crecimiento_poblacional,Israel,1,1991,1991
+crecimiento_poblacional,San Marino,1,2004,2004
+crecimiento_poblacional,Seychelles,1,2011,2011
+crecimiento_poblacional,Sri Lanka,1,2013,2013
+crecimiento_poblacional,Trinidad and Tobago,1,2005,2005
+crecimiento_poblacional,Zimbabwe,1,1981,1981
+esperanza_vida,South Sudan,18,1984,2017
+esperanza_vida,Timor-Leste,11,1975,1988
+esperanza_vida,Central African Republic,6,2009,2022
+esperanza_vida,Cambodia,4,1975,1978
+esperanza_vida,"Somalia, Fed. Rep.",3,1991,2011
+esperanza_vida,Afghanistan,2,1984,1985
+esperanza_vida,Burundi,1,1993,1993
+esperanza_vida,Liberia,1,1990,1990
+esperanza_vida,Rwanda,1,1994,1994
+fecundidad,Niger,17,2006,2024
+fecundidad,"Somalia, Fed. Rep.",12,2008,2024
+fecundidad,Chad,9,2016,2024
+fecundidad,"Congo, Dem. Rep.",6,2019,2024
+fecundidad,Central African Republic,5,2020,2024
+gasto_bolsillo_salud,"Yemen, Rep.",1,2015,2015
+gasto_publico_salud_pib,Tuvalu,23,2000,2023
+gasto_publico_salud_pib,Cuba,14,2007,2021
+gasto_publico_salud_pib,Naoero,12,2000,2023
+gasto_publico_salud_pib,Kiribati,8,2001,2008
+gasto_publico_salud_pib,Sweden,7,2012,2018
+gasto_publico_salud_pib,Japan,3,2012,2015
+gasto_salud_pib,United States,24,2000,2023
+gasto_salud_pib,Tuvalu,15,2000,2023
+gasto_salud_pib,Marshall Islands,13,2000,2019
+gasto_salud_pib,Naoero,8,2000,2023
+gasto_salud_pib,Afghanistan,5,2018,2022
+gasto_salud_pib,Kiribati,2,2001,2004
+gasto_salud_pib,"Micronesia, Fed. Sts.",2,2004,2005
+gasto_salud_pib,Lesotho,1,2019,2019
+gasto_salud_pib,Sierra Leone,1,2014,2014
+gasto_salud_pib,South Sudan,1,2017,2017
+migracion_neta,Canada,66,1960,2025
+migracion_neta,United States,66,1960,2025
+migracion_neta,Bangladesh,63,1960,2025
+migracion_neta,Mexico,62,1960,2025
+migracion_neta,Russian Federation,62,1960,2025
+migracion_neta,Australia,61,1960,2025
+migracion_neta,Germany,60,1960,2025
+migracion_neta,Philippines,58,1960,2025
+migracion_neta,Saudi Arabia,58,1960,2025
+migracion_neta,China,55,1960,2025
+migracion_neta,Angola,54,1960,2019
+migracion_neta,India,54,1960,2025
+migracion_neta,Malaysia,54,1960,2025
+migracion_neta,Pakistan,54,1961,2025
+migracion_neta,United Arab Emirates,53,1968,2025
+migracion_neta,South Africa,52,1960,2025
+migracion_neta,"Iran, Islamic Rep.",49,1960,2025
+migracion_neta,Cote d'Ivoire,48,1960,2013
+migracion_neta,Japan,48,1960,2025
+migracion_neta,France,47,1960,2025
+migracion_neta,Turkiye,47,1960,2025
+migracion_neta,"Korea, Rep.",46,1960,2025
+migracion_neta,Mozambique,46,1960,2025
+migracion_neta,Sudan,46,1973,2025
+migracion_neta,United Kingdom,46,1960,2025
+migracion_neta,Italy,45,1960,2025
+migracion_neta,Spain,44,1960,2025
+migracion_neta,Thailand,44,1965,2016
+migracion_neta,"Congo, Dem. Rep.",42,1960,2021
+migracion_neta,Nigeria,39,1961,2023
+migracion_neta,"Egypt, Arab Rep.",38,1961,2025
+migracion_neta,Afghanistan,37,1975,2025
+migracion_neta,Tanzania,36,1968,2017
+migracion_neta,Kazakhstan,35,1960,1998
+migracion_neta,Nepal,35,1986,2025
+migracion_neta,Kuwait,34,1960,2025
+migracion_neta,Uganda,34,1971,2025
+migracion_neta,Zimbabwe,33,1977,2025
+migracion_neta,Ukraine,32,1960,2025
+migracion_neta,Colombia,31,1960,2025
+migracion_neta,Morocco,31,1960,2025
+migracion_neta,Viet Nam,31,1971,2024
+migracion_neta,Romania,30,1960,2011
+migracion_neta,Brazil,28,1981,2025
+migracion_neta,Ethiopia,28,1975,2017
+migracion_neta,Indonesia,27,1960,2003
+migracion_neta,Myanmar,27,1973,2020
+migracion_neta,Sri Lanka,27,1975,2011
+migracion_neta,South Sudan,26,1988,2023
+migracion_neta,Cambodia,25,1970,2018
+migracion_neta,Chile,22,1960,2025
+migracion_neta,Portugal,22,1960,2021
+migracion_neta,Singapore,22,1980,2022
+migracion_neta,"Somalia, Fed. Rep.",22,1978,2023
+migracion_neta,Switzerland,21,1960,2023
+migracion_neta,Algeria,20,1960,1997
+migracion_neta,Argentina,20,1960,1987
+migracion_neta,Jordan,20,1960,2025
+migracion_neta,Peru,20,2000,2021
+migracion_neta,Georgia,19,1960,2001
+migracion_neta,Greece,19,1960,2024
+migracion_neta,Iraq,19,1985,2016
+migracion_neta,Israel,19,1961,2000
+migracion_neta,Netherlands,19,1966,2025
+migracion_neta,Uzbekistan,19,1960,1990
+migracion_neta,Syrian Arab Republic,18,2006,2025
+migracion_neta,Cuba,16,1960,1975
+migracion_neta,Kenya,16,1971,2021
+migracion_neta,Sweden,16,1964,2025
+migracion_neta,Burundi,14,1964,2016
+migracion_neta,Ghana,14,1961,1989
+migracion_neta,Libya,14,1960,2011
+migracion_neta,Malawi,14,1979,1994
+migracion_neta,Chad,13,1980,2025
+migracion_neta,El Salvador,13,1979,2003
+migracion_neta,Qatar,13,2006,2024
+migracion_neta,Rwanda,13,1961,2002
+migracion_neta,Oman,12,2011,2025
+migracion_neta,Armenia,11,1965,2023
+migracion_neta,Kyrgyz Republic,11,1960,2021
+migracion_neta,Sierra Leone,11,1990,2002
+migracion_neta,"Venezuela, RB",11,2015,2025
+migracion_neta,Austria,10,1971,2022
+migracion_neta,Burkina Faso,10,1960,1973
+migracion_neta,Poland,10,1961,2025
+migracion_neta,Jamaica,9,1960,1968
+migracion_neta,Lebanon,9,2012,2020
+migracion_neta,Mali,9,1984,2012
+migracion_neta,Central African Republic,8,1983,2021
+migracion_neta,Liberia,8,1990,2011
+migracion_neta,West Bank and Gaza,8,1960,1987
+migracion_neta,Azerbaijan,7,1976,2023
+migracion_neta,Belgium,7,2009,2023
+migracion_neta,New Zealand,7,1973,2020
+migracion_neta,Togo,7,1969,2021
+migracion_neta,Tunisia,7,1960,1966
+migracion_neta,Bosnia and Herzegovina,6,1992,1997
+migracion_neta,Bulgaria,6,1975,1992
+migracion_neta,Guatemala,6,1974,1982
+migracion_neta,Ireland,6,1960,2023
+migracion_neta,Tajikistan,5,1989,1999
+migracion_neta,Belarus,4,1960,1963
+migracion_neta,Eritrea,4,1991,2014
+migracion_neta,Guinea,4,1990,2001
+migracion_neta,Cameroon,3,1980,2014
+migracion_neta,Czechia,3,2022,2025
+migracion_neta,Benin,2,1993,1994
+migracion_neta,"Congo, Rep.",2,2000,2009
+migracion_neta,Finland,2,1969,1970
+migracion_neta,Kosovo,2,1998,1999
+migracion_neta,Norway,2,2023,2024
+migracion_neta,"Yemen, Rep.",2,2020,2021
+migracion_neta,Zambia,2,1971,1972
+migracion_neta,Albania,1,1960,1960
+migracion_neta,Croatia,1,1960,1960
+migracion_neta,Ecuador,1,2018,2018
+migracion_neta,Haiti,1,1960,1960
+migracion_neta,Hungary,1,2023,2023
+migracion_neta,Lithuania,1,2023,2023
+migracion_neta,Moldova,1,1960,1960
+migracion_neta,Namibia,1,1989,1989
+migracion_neta,Paraguay,1,1960,1960
+migracion_neta,Slovak Republic,1,2022,2022
+migracion_neta,Timor-Leste,1,1999,1999
+pib_per_capita_ppa,Luxembourg,36,1990,2025
+pib_per_capita_ppa,Norway,36,1990,2025
+pib_per_capita_ppa,Qatar,36,1990,2025
+pib_per_capita_ppa,Singapore,36,1990,2025
+pib_per_capita_ppa,Switzerland,36,1990,2025
+pib_per_capita_ppa,Brunei Darussalam,31,1990,2020
+pib_per_capita_ppa,United Arab Emirates,27,1990,2016
+pib_per_capita_ppa,Ireland,19,1998,2025
+pib_per_capita_ppa,Kuwait,18,1992,2009
+pib_per_capita_ppa,Andorra,17,1990,2006
+pib_per_capita_ppa,Denmark,15,1990,2004
+pib_per_capita_ppa,San Marino,14,1997,2010
+pib_per_capita_ppa,Saudi Arabia,14,1990,2003
+pib_per_capita_ppa,Austria,13,1991,2003
+pib_per_capita_ppa,Bahrain,13,1991,2003
+pib_per_capita_ppa,Belgium,13,1991,2003
+pib_per_capita_ppa,Germany,13,1991,2003
+pib_per_capita_ppa,Italy,13,1991,2003
+pib_per_capita_ppa,Netherlands,13,1991,2003
+pib_per_capita_ppa,United States,13,1991,2003
+pib_per_capita_ppa,Iceland,12,1991,2003
+pib_per_capita_ppa,Canada,7,1995,2003
+pib_per_capita_ppa,Sweden,7,1995,2003
+pib_per_capita_ppa,Finland,4,2000,2003
+pib_per_capita_ppa,France,3,1995,2000
+poblacion_65_mas,Monaco,66,1960,2025
+poblacion_65_mas,Sweden,30,1960,1989
+poblacion_65_mas,Norway,23,1960,1982
+poblacion_65_mas,Austria,22,1960,1981
+poblacion_65_mas,Germany,22,1960,1981
+poblacion_65_mas,United Kingdom,22,1960,1981
+poblacion_65_mas,Belgium,20,1960,1979
+poblacion_65_mas,France,15,1960,1976
+poblacion_65_mas,Denmark,14,1960,1977
+poblacion_65_mas,Luxembourg,12,1960,1971
+poblacion_65_mas,Latvia,11,1960,1970
+poblacion_65_mas,Estonia,10,1960,1969
+poblacion_65_mas,Czechia,8,1963,1970
+poblacion_65_mas,Ireland,8,1960,1967
+poblacion_65_mas,Switzerland,8,1960,1967
+poblacion_65_mas,Hungary,4,1964,1967
+poblacion_65_mas,Italy,2,1963,1964
+poblacion_65_mas,San Marino,1,1960,1960
+poblacion_total,Bangladesh,66,1960,2025
+poblacion_total,Brazil,66,1960,2025
+poblacion_total,China,66,1960,2025
+poblacion_total,"Egypt, Arab Rep.",66,1960,2025
+poblacion_total,Ethiopia,66,1960,2025
+poblacion_total,Germany,66,1960,2025
+poblacion_total,India,66,1960,2025
+poblacion_total,Indonesia,66,1960,2025
+poblacion_total,"Iran, Islamic Rep.",66,1960,2025
+poblacion_total,Japan,66,1960,2025
+poblacion_total,Mexico,66,1960,2025
+poblacion_total,Nigeria,66,1960,2025
+poblacion_total,Pakistan,66,1960,2025
+poblacion_total,Philippines,66,1960,2025
+poblacion_total,Russian Federation,66,1960,2025
+poblacion_total,Turkiye,66,1960,2025
+poblacion_total,United States,66,1960,2025
+poblacion_total,Viet Nam,66,1960,2025
+poblacion_total,Thailand,62,1960,2021
+poblacion_total,France,57,1960,2016
+poblacion_total,United Kingdom,56,1960,2015
+poblacion_total,Italy,52,1960,2011
+poblacion_total,Ukraine,43,1960,2002
+poblacion_total,"Korea, Rep.",41,1960,2000
+poblacion_total,Myanmar,38,1960,1997
+poblacion_total,"Congo, Dem. Rep.",34,1992,2025
+poblacion_total,Spain,32,1960,1991
+poblacion_total,Poland,30,1960,1990
+poblacion_total,South Africa,15,1987,2001
+poblacion_total,Argentina,2,1960,1961
