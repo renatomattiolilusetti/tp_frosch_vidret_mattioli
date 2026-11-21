@@ -17,7 +17,7 @@ wdi_limpia <- read_csv(
   show_col_types = FALSE
 )
 
-#### Tratamiento de outliers ###################################################
+# Tratamiento de outliers ####
 
 variables_atipicos <- c(
   "poblacion_65_mas",
@@ -173,8 +173,8 @@ wdi_pre_mco |>
     gasto_publico_salud_pib
   )
 
-#### Regresion 2000 ############################################################
-#### Preparación de las variables ##############################################
+# Regresion 2000 ####
+# Preparación de las variables ####
 base_2000 <- wdi_pre_mco |>
   filter(anio == 2000) |>
   mutate(
@@ -197,7 +197,7 @@ stopifnot(all(is.finite(base_2000$log_pib_pc[!is.na(base_2000$log_pib_pc)])))
 # El tamano poblacional se usara para IMPUTAR, no en la regresion final.
 base_2000_modelo <- base_2000 |> select(-log_poblacion)
 
-### Diagnóstico NA #############################################################
+# Diagnóstico NA ####
 # Cantidad de NA por variable.
 faltantes_2000 <- colSums(is.na(base_2000_modelo))
 print(faltantes_2000)
@@ -234,7 +234,7 @@ test_mcar_2000 <- naniar::mcar_test(
 )
 print(test_mcar_2000)
 
-#### Regresion con casos completos############################################## 
+# Regresion con casos completos#### 
 base_2000_completa <- base_2000_modelo |> drop_na()
 cat("Paises totales:", nrow(base_2000_modelo), "\n")
 cat("Paises con datos completos:", nrow(base_2000_completa), "\n")
@@ -247,7 +247,7 @@ modelo_2000 <- lm(
 )
 print(summary(modelo_2000))
 
-### Imputacion multiple ########################################################
+# Imputacion multiple ####
 base_mice_2000_poblacion <- base_2000 |> select(-pais)
 
 imp_2000_poblacion <- mice(
@@ -338,7 +338,7 @@ resultado_mice_hc1_2000 <- mice::pool(
 # Mostrar resultados
 summary(resultado_mice_hc1_2000, conf.int = TRUE)
 
-#### Regresion 2010 ############################################################
+# Regresion 2010 ####
 
 base_2010 <- wdi_pre_mco |>
   filter(anio == 2010) |>
@@ -375,7 +375,7 @@ colSums(is.na(base_2010_modelo))
 # Contar países con todas las variables disponibles
 sum(complete.cases(base_2010_modelo))
 
-### Diagnóstico NA #############################################################
+# Diagnóstico NA ####
 
 # Identificar países que quedarían excluidos
 diagnostico_2010 <- base_2010_modelo |>
@@ -417,7 +417,7 @@ test_mcar_2010 <- naniar::mcar_test(
 
 print(test_mcar_2010)
 
-#### Regresion con casos completos############################################## 
+# Regresion con casos completos ####
 
 # Seleccionar países con información completa
 base_2010_completa <- base_2010_modelo |>
@@ -442,7 +442,7 @@ modelo_2010 <- lm(
 # Mostrar los resultados
 summary(modelo_2010)
 
-### Imputacion multiple ########################################################
+# Imputacion multiple ####
 
 # Crear la base de imputación
 base_mice_2010_poblacion <- base_2010 |>
@@ -565,7 +565,7 @@ resultado_mice_hc1_2010 <- mice::pool(
 # Mostrar resultados combinados
 summary(resultado_mice_hc1_2010, conf.int = TRUE)
 
-#### Regresion 2019 ############################################################
+# Regresion 2019 ####
 
 # Preparar la base de 2019
 base_2019 <- wdi_pre_mco |>
@@ -610,7 +610,7 @@ anyDuplicated(base_2019$pais)
 # Contar los NA por variable
 colSums(is.na(base_2019_modelo))
 
-### Diagnóstico NA #############################################################
+# Diagnóstico NA ####
 
 # Identificar países que quedarían excluidos
 diagnostico_2019 <- base_2019_modelo |>
@@ -650,7 +650,7 @@ test_mcar_2019 <- naniar::mcar_test(
 
 test_mcar_2019
 
-#### Regresion con casos completos############################################## 
+# Regresion con casos completos ####
 
 # Conservar los países con información completa
 base_2019_completa <- base_2019_modelo |>
@@ -675,7 +675,7 @@ modelo_2019 <- lm(
 # Mostrar los resultados
 summary(modelo_2019)
 
-### Imputacion multiple ########################################################
+# Imputacion multiple ####
 
 # Preparar base para MICE
 base_mice_2019_poblacion <- base_2019 |>
@@ -826,7 +826,7 @@ comparacion_caf_2019 <- tibble(
 print(comparacion_caf_2019)
 
 
-#### Sensibilidad CAF 2019: interpolación lineal con HC1 ####################
+# Sensibilidad CAF 2019: interpolación lineal con HC1 ####
 
 # Calcular la esperanza de vida interpolada para CAF en 2019
 
@@ -862,7 +862,6 @@ stopifnot(
   is.na(base_2019$esperanza_vida[fila_caf])
 )
 
-
 # Estimar las 20 regresiones con CAF interpolada y errores HC1
 
 modelos_hc1_interpolados_2019 <- lapply(
@@ -896,7 +895,6 @@ modelos_hc1_interpolados_2019 <- lapply(
     )
   }
 )
-
 
 # Combinar las regresiones mediante las reglas de Rubin
 
@@ -956,7 +954,7 @@ tabla_sensibilidad_caf_hc1 |>
   print(n = Inf, width = Inf)
 
 
-##### Matrices de correlacion #################################################
+# Matrices de correlacion ####
 
 ### 2000
 # Seleccionar las variables explicativas numéricas
@@ -1083,7 +1081,7 @@ grafico_correlaciones_2019 <- ggplot(
 # Mostrar el gráfico
 grafico_correlaciones_2019
 
-##### Homoscedasticidad #####################################################
+# Homoscedasticidad ####
 
 # Test de Breusch-Pagan para 2000
 bp_2000 <- lmtest::bptest(modelo_2000)
@@ -1099,7 +1097,7 @@ bp_2000
 bp_2010
 bp_2019
 
-##### Modelos progresivos #####################################################
+# Modelos progresivos ####
 
 ### 2000
 # Modelo 1: demográfico
@@ -1238,7 +1236,7 @@ stopifnot(
 # Mostrar los resultados
 print(tabla_wald_hc1, n = Inf)
 
-##### Tablas de modelos progresivos con HC1 ####################
+# Tablas de modelos progresivos con HC1 ####
 
 # Variables que queremos comparar
 variables_tabla <- c(
@@ -1297,14 +1295,11 @@ print(comparacion_modelos, n = Inf)
 
 # Guardar resultados de las regresiones
 
-
-
 # 1. Comparación de los nueve modelos MCO
 write_csv(
   comparacion_modelos,
   "output/tablas/comparacion_modelos.csv"
 )
-
 
 # 2. Coeficientes y errores estándar robustos HC1
 # Reunimos los resultados de los nueve modelos en una sola tabla
@@ -1346,7 +1341,6 @@ write_csv(
   "output/tablas/regresiones_mice_hc1.csv"
 )
 
-
 # 4. Pruebas de Breusch-Pagan
 tabla_breusch_pagan <- tibble(
   anio = c(2000, 2010, 2019),
@@ -1367,20 +1361,17 @@ write_csv(
   "output/tablas/test_breusch_pagan.csv"
 )
 
-
 # 5. Sensibilidad del tratamiento de República Centroafricana
 write_csv(
   tabla_sensibilidad_caf_hc1,
   "output/tablas/sensibilidad_caf_2019.csv"
 )
 
-
 # 6. Diagnóstico de outliers de las regresiones
 write_csv(
   resumen_outliers,
   "output/tablas/outliers_regresiones.csv"
 )
-
 
 # 7. Gráfico de correlaciones entre regresores
 ggsave(
