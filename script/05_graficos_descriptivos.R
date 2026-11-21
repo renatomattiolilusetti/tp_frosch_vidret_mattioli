@@ -606,7 +606,7 @@ grafico_65_ingreso <- ggplot(
 
 print(grafico_65_ingreso)
 
-
+# Resultados ####
 
 carpeta_outputs <- file.path("output", "graficos")
 dir.create(carpeta_outputs, recursive = TRUE, showWarnings = FALSE)

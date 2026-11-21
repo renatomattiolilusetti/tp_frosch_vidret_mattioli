@@ -30,7 +30,8 @@ vars_demograficas <- c("poblacion_65_mas", "fecundidad", "esperanza_vida",
 archivos_necesarios <- c(
   "input/wdi_limpia.csv",
   "auxiliar/base_cluster_demografico_cortes.csv",
-  "output/tablas/trayectorias_paises_demograficos.csv"
+  "output/tablas/trayectorias_paises_demograficos.csv",
+  "output/tablas/regresiones_mice_hc1.csv"
 )
 
 # Verificar que existan los archivos
@@ -635,11 +636,173 @@ ggsave(
   bg = "white"
 )
 
-# 4. Control final de archivos generados ####
+# 4. Gráfico de coeficientes: regresiones de 2000, 2010 y 2019 ####
+
+# Leer los coeficientes con MICE y errores robustos HC1
+regresiones_mice_hc1 <- read_csv(
+  "output/tablas/regresiones_mice_hc1.csv",
+  show_col_types = FALSE
+)
+
+# 4.2. Seleccionar variables y verificar los intervalos de confianza
+
+variables_coeficientes <- c(
+  "fecundidad",
+  "esperanza_vida",
+  "gasto_publico_salud_pib"
+)
+
+columnas_coeficientes <- c("term", "anio", "estimate", "2.5 %", "97.5 %")
+if (!all(columnas_coeficientes %in% names(regresiones_mice_hc1))) {
+  stop("Faltan columnas en regresiones_mice_hc1.csv: ",
+       paste(setdiff(columnas_coeficientes, names(regresiones_mice_hc1)),
+             collapse = ", "))
+}
+
+coeficientes_grafico <- regresiones_mice_hc1 |>
+  filter(term %in% variables_coeficientes, anio %in% c(2000, 2010, 2019)) |>
+  rename(
+    ic_inferior = `2.5 %`,
+    ic_superior = `97.5 %`
+  ) |>
+  mutate(
+    variable = recode(
+      term,
+      fecundidad = "Fecundidad",
+      esperanza_vida = "Esperanza de vida",
+      gasto_publico_salud_pib = "Gasto público en salud"
+    ),
+    variable = factor(variable, levels = c(
+      "Fecundidad", "Esperanza de vida", "Gasto público en salud"
+    )),
+    anio = factor(anio, levels = c(2000, 2010, 2019))
+  )
+
+# Debe haber una fila por variable y año, con intervalos válidos.
+stopifnot(
+  nrow(coeficientes_grafico) == 9,
+  !anyDuplicated(coeficientes_grafico[c("term", "anio")]),
+  all(is.finite(coeficientes_grafico$estimate)),
+  all(is.finite(coeficientes_grafico$ic_inferior)),
+  all(is.finite(coeficientes_grafico$ic_superior)),
+  all(coeficientes_grafico$ic_inferior <= coeficientes_grafico$estimate),
+  all(coeficientes_grafico$estimate <= coeficientes_grafico$ic_superior)
+)
+
+print(coeficientes_grafico |>
+        select(anio, variable, estimate, ic_inferior, ic_superior), n = Inf)
+
+# 4.3. Construcción del gráfico de coeficientes
+# Cada panel utiliza su propia escala porque los indicadores tienen distintas unidades.
+
+col_anios <- c(
+  "2000" = "#A1AFBA",
+  "2010" = "#667B8D",
+  "2019" = "#0072B2"
+)
+
+grafico_coeficientes <- ggplot(coeficientes_grafico, aes(y = anio)) +
+  
+  # La línea vertical representa un coeficiente igual a cero.
+  geom_vline(
+    xintercept = 0, color = "#AFBDC8",
+    linetype = "dashed", linewidth = 0.55
+  ) +
+  
+  # Segmentos: intervalos de confianza al 95% ya calculados con MICE y HC1.
+  geom_segment(
+    aes(x = ic_inferior, xend = ic_superior, yend = anio, color = anio),
+    linewidth = 1.1, show.legend = FALSE
+  ) +
+  
+  # Puntos: coeficientes estimados; 2019 se destaca en azul.
+  geom_point(
+    aes(x = estimate, fill = anio),
+    shape = 21, size = 3.8, color = "white", stroke = 0.5,
+    show.legend = FALSE
+  ) +
+  
+  facet_wrap(~ variable, nrow = 1, scales = "free_x") +
+  scale_color_manual(values = col_anios) +
+  scale_fill_manual(values = col_anios) +
+  scale_x_continuous(
+    breaks = scales::breaks_pretty(n = 4),
+    labels = label_number(decimal.mark = ",", big.mark = "."),
+    expand = expansion(mult = c(0.12, 0.12))
+  ) +
+  
+  labs(
+    title = "La esperanza de vida se asocia positivamente con el envejecimiento",
+    subtitle = paste0(
+      "Regresiones múltiples, 2000, 2010 y 2019. ",
+      "Puntos: coeficientes; segmentos: IC del 95%. ",
+      "Azul: 2019."
+    ),
+    x = "Coeficiente estimado (p.p. de población de 65+ por unidad del indicador)",
+    y = NULL,
+    caption = paste0(
+      "Fuente: Banco Mundial (WDI). Elaboración propia. ",
+      "MICE (20 imputaciones), HC1 y controles demográficos, económicos, sanitarios y regionales.\n",
+      "Unidades: fecundidad (hijos por mujer), esperanza de vida (años), ",
+      "gasto público en salud (% del PIB). Escalas independientes. Línea punteada: cero."
+    )
+  ) +
+  theme_minimal(base_size = 12, base_family = fuente_texto) +
+  theme(
+    plot.title.position = "plot",
+    plot.caption.position = "plot",
+    plot.title = element_text(
+      family = fuente_titulo, size = 17.5, face = "bold",
+      color = azul_titulo, hjust = 0, lineheight = 1.08,
+      margin = margin(b = 8)
+    ),
+    plot.subtitle = element_text(
+      family = fuente_texto, size = 10.5,
+      color = azul_texto, hjust = 0, lineheight = 1.15,
+      margin = margin(b = 12)
+    ),
+    plot.caption = element_text(
+      family = fuente_texto, size = 8.8,
+      color = azul_nota, hjust = 0, lineheight = 1.2,
+      margin = margin(t = 12)
+    ),
+    strip.text = element_text(
+      face = "bold", hjust = 0.5, color = azul_titulo,
+      size = 11.5, margin = margin(t = 2, b = 8)
+    ),
+    panel.grid.minor = element_blank(),
+    panel.grid.major.y = element_blank(),
+    panel.grid.major.x = element_line(color = "#E5EBEF", linewidth = 0.3),
+    panel.spacing.x = unit(15, "pt"),
+    axis.title = element_text(color = azul_texto, size = 10),
+    axis.title.x = element_text(margin = margin(t = 8)),
+    axis.text = element_text(color = gris_ejes, size = 9.5),
+    plot.background = element_rect(fill = "white", color = NA),
+    plot.margin = margin(13, 18, 11, 16)
+  )
+
+print(grafico_coeficientes)
+
+# 4.4. Exportación del gráfico de coeficientes
+
+archivo_coeficientes <- "output/graficos/coeficientes_regresiones.jpg"
+
+ggsave(
+  filename = archivo_coeficientes,
+  plot = grafico_coeficientes,
+  width = 25,
+  height = 12.5,
+  units = "cm",
+  dpi = 300,
+  bg = "white"
+)
+
+# 5. Control final de archivos generados ####
 
 archivos_generados <- c(
   "output/graficos/grupo_10_exploratorio.jpg",
-  "output/graficos/grupo_10_comunicativo.jpg"
+  "output/graficos/grupo_10_comunicativo.jpg",
+  "output/graficos/coeficientes_regresiones.jpg"
 )
 
 stopifnot(
@@ -647,3 +810,4 @@ stopifnot(
 )
 
 print("11 finalizado: todos los gráficos fueron generados.")
+
