@@ -863,7 +863,7 @@ stopifnot(
 
 modelos_hc1_interpolados_2019 <- lapply(
   seq_len(imp_2019_poblacion$m),
-  function(i) {
+function(i) {
     
     # Recuperar una base imputada
     datos <- mice::complete(imp_2019_poblacion, action = i)
@@ -1290,9 +1290,7 @@ comparacion_modelos <- tibble(
 # Mostrar los resultados
 print(comparacion_modelos, n = Inf)
 
-# ==============================================================================
 # Guardar resultados de las regresiones
-# ==============================================================================
 
 # Crear las carpetas de resultados
 dir.create("output/tablas", recursive = TRUE, showWarnings = FALSE)

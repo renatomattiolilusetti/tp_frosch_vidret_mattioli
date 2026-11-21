@@ -2,18 +2,14 @@
 # Gráficos correspondientes a la sección de Análisis de variables 
 # ==============================================================================
 
-
+library(tidyverse)
+library(scales)
 library(patchwork)
 library(ggplot2)
 
 wdi_limpia <- read_csv("input/wdi_limpia.csv")
 
-  #=============================================================================
-  # EVOLUCIÓN DE LA POBLACIÓN POR REGIÓN 
-  # ============================================================================
-
-library(tidyverse)
-library(scales)
+# Evolución de la población por región #####
 
 # Detectar automáticamente la columna de población total si tuviera otro nombre
 col_pob <- intersect(
@@ -158,12 +154,7 @@ grafico_poblacion_region <- ggplot(
 print(grafico_poblacion_region)
 
 
-# ==============================================================================
-# GRAFICO: NATALIDAD Y MORTALIDAD POR REGION (1960-2025)
-# ==============================================================================
-
-library(tidyverse)
-library(scales)
+# Natalidad y mortalidad por región (1960-2025) #####
 
 # 1. Detectar columnas de poblacion, natalidad y mortalidad en wdi_limpia
 col_pob <- intersect(
@@ -346,12 +337,7 @@ print(grafico_natalidad_mortalidad)
 
 
 
-# ==============================================================================
-# GRAFICO: CRECIMIENTO POBLACIONAL POR REGION PONDERADO (1960-2025)
-# ==============================================================================
-
-library(tidyverse)
-library(scales)
+# Crecimiento poblacional por región, ponderado ####
 
 # 1. Detectar columnas de poblacion y crecimiento poblacional en wdi_limpia
 col_pob <- intersect(
@@ -513,14 +499,7 @@ grafico_crecimiento_region <- ggplot(
 
 print(grafico_crecimiento_region)
 
-
-
-# ==============================================================================
-# GRAFICO: POBLACION DE 65 ANOS Y MAS EN 2024 POR GRUPO DE INGRESO
-# ==============================================================================
-
-library(tidyverse)
-library(scales)
+# Población de 65 años y más en 2024, por grupo de ingreso ####
 
 # 1. Detectar columnas de grupo de ingreso y poblacion de 65+ en wdi_limpia
 col_ingreso <- intersect(
