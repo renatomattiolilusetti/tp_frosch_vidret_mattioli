@@ -3,7 +3,6 @@
 # ==============================================================================
 
 # Paquetes 
-
 library(tidyverse)
 library(FactoMineR)
 library(cluster)
@@ -11,19 +10,17 @@ library(zoo)
 library(gt)
 
 # Funciones propias
-
 source("utils/pca_demografico.R")
 source("utils/evaluar_clusters_demograficos.R")
 source("utils/clustering_demografico.R")
 source("utils/theme_tp.R")
 
 # Partimos de la base limpia
-
 wdi_limpia <- read_csv("input/wdi_limpia.csv")
 
 # Intro: preparación ####
-# Retomamos las variables de interés para armar los clusters
 
+# Retomamos las variables de interés para armar los clusters
 vars_demograficas <- c(
   "poblacion_65_mas",
   "fecundidad",
@@ -37,8 +34,7 @@ base_demo <- wdi_limpia |>
 
 # Diagnóstico de valores faltantes ####
 
-# Cuántos NA hay por variable:
-
+# Cuántos NA hay por variable
 base_demo |>
   summarise(
     across(
@@ -47,8 +43,7 @@ base_demo |>
     )
   )
 
-# En qué años se concentran esos faltantes:
-
+# En qué años se concentran esos faltantes
 base_demo |>
   group_by(anio) |>
   summarise(
@@ -59,7 +54,6 @@ base_demo |>
   )
 
 # Pasamos las variables a formato largo
-
 na_demo <- base_demo |>
   pivot_longer(
     all_of(vars_demograficas),
@@ -67,8 +61,7 @@ na_demo <- base_demo |>
     values_to = "valor"
   )
 
-# Cuánto falta de cada variable:
-
+# Cuánto falta de cada variable
 na_demo |>
   summarise(
     n_na = sum(is.na(valor)),
@@ -76,21 +69,18 @@ na_demo |>
     .by = variable
   )
 
-# En qué años están los faltantes:
-
+# En qué años están los faltantes
 na_demo |>
   filter(is.na(valor)) |>
   count(anio, variable)
 
-# Qué países concentran los faltantes:
-
+# Qué países concentran los faltantes
 na_demo |>
   filter(is.na(valor)) |>
   count(pais, variable, sort = TRUE)
 
 # 1960 tiene el 100% de faltantes en crecimiento poblacional. Decidimos entonces
 # arrancar desde 1961. Corregimos base
-
 base_demo <- wdi_limpia |>
   filter(between(anio, 1961, 2024)) |>
   select(pais, codigo_pais, anio, all_of(vars_demograficas))
@@ -110,13 +100,11 @@ na_demo |>
   )
 
 # De que países vienen esos NA
-
 na_demo |>
   filter(is.na(valor)) |>
   count(pais, variable, sort = TRUE)
 
 # En qué años se concentran esos faltantes
-
 na_demo |>
   filter(is.na(valor)) |>
   summarise(
@@ -126,8 +114,7 @@ na_demo |>
   ) |>
   arrange(desc(n))
 
-# Mirando más precisamente Cisjordania y Gaza:
-
+# Mirando más precisamente Cisjordania y Gaza
 na_demo |>
   filter(pais == "West Bank and Gaza", is.na(valor)) |>
   summarise(
@@ -141,12 +128,10 @@ na_demo |>
 # Como tenemos tres décadas sin datos para las variables de crecimiento poblacional, 
 # fecundidad y esperanza de vida, exlcuimos al país del análisis (sería perder 1 país
 # de 195)
-
 base_demo <- base_demo |>
   filter(pais != "West Bank and Gaza")
 
 # Qué hacemos con los otros faltantes?
-
 base_demo |>
   pivot_longer(
     all_of(vars_demograficas),
@@ -158,7 +143,6 @@ base_demo |>
   arrange(pais, variable, anio)
 
 # Miramos los valores alrededor de esos NA
-
 base_demo |>
   pivot_longer(
     all_of(vars_demograficas),
@@ -176,7 +160,6 @@ base_demo |>
   ungroup()
 
 # Miramos mas precisamente Seychelles y Luxemburgo
-
 wdi_limpia |>
   filter(
     (pais == "Luxembourg" & anio %in% 1960:1964) |
@@ -185,7 +168,6 @@ wdi_limpia |>
   select(pais, anio, fecundidad, crecimiento_poblacional)
 
 # Interpolamos para todos los casos
-
 base_demo <- wdi_limpia |>
   filter(
     between(anio, 1960, 2024),
@@ -203,17 +185,14 @@ base_demo <- wdi_limpia |>
   ungroup() |>
   filter(anio >= 1961)
 
-# Chequeo de que la interpolación esté bien:
-
+# Chequeo de que la interpolación esté bien
 base_demo |>
   summarise(across(all_of(vars_demograficas), ~ sum(is.na(.x))))
 
 # Guardamos la base interpolada para usarla en otros scripts
-
 write_csv(base_demo, "output/tablas/base_demo_interpolada.csv")
 
-# Vemos resultados de la imputación:
-
+# Vemos resultados de la imputación
 wdi_limpia |>
   filter(
     between(anio, 1960, 2024),
@@ -249,8 +228,7 @@ wdi_limpia |>
 # Clusters: ¿Cuándo pasan los países de un perfil demográfico joven a uno más avanzado 
 # si usamos la misma clasificación para todo el período 1961–2024?
 
-# Armamos un PCA común:
-
+# Armamos un PCA común
 pca_demo <- PCA(
   base_demo |> select(all_of(vars_demograficas)),
   scale.unit = TRUE,
@@ -262,8 +240,7 @@ pca_demo$eig
 
 round(pca_demo$var$coord[, 1:2], 2)
 
-# Para ver cuántos perfiles sugiere el clustering conjunto:
-
+# Para ver cuántos perfiles sugiere el clustering conjunto
 hcpc_demo <- HCPC(
   pca_demo,
   nb.clust = 0,
@@ -278,8 +255,7 @@ table(hcpc_demo$data.clust$clust)
 hcpc_demo$call$t$nb.clust
 
 # Evaluamos qué tan bien separados están los cuatro clusters obtenidos. Usamos el 
-# índice silhouette sobre una muestra de observaciones para evitar un cálculo innecesariamente pesado.
-
+# índice silhouette sobre una muestra de observaciones para evitar un cálculo innecesariamente pesado
 set.seed(42)
 
 muestra <- sample(nrow(pca_demo$ind$coord), 2000)
@@ -291,11 +267,10 @@ sil <- silhouette(
 
 mean(sil[, "sil_width"])
 
-# Qué agrupación separa mejor las observaciones
+# Qué agrupación separa mejor las observaciones?
 
 # Recalculamos el índice silhouette usando los cuatro componentes del PCA,
-# para evaluar los clusters en el mismo espacio en el que fueron construidos.
-
+# para evaluar los clusters en el mismo espacio en el que fueron construidos
 coord_muestra <- pca_demo$ind$coord[muestra, 1:4]
 dist_muestra <- dist(coord_muestra)
 
@@ -317,8 +292,7 @@ comparacion_k <- map_dfr(2:5, \(k) {
 
 comparacion_k
 
-# Fijamos dos clusters porque fue la solución con mayor silhouette promedio.
-
+# Fijamos dos clusters porque fue la solución con mayor silhouette promedio
 hcpc_demo <- HCPC(
   pca_demo,
   nb.clust = 2,
@@ -329,12 +303,10 @@ hcpc_demo <- HCPC(
 table(hcpc_demo$data.clust$clust)
 
 # Asociamos a cada observación país-año el cluster asignado
-
 demo_cluster <- base_demo |>
   mutate(cluster = hcpc_demo$data.clust$clust)
 
-# Comparamos los valores promedio de las cuatro variables demográficas entre clusters.
-
+# Comparamos los valores promedio de las cuatro variables demográficas entre clusters
 demo_cluster |>
   summarise(
     across(all_of(vars_demograficas), ~ round(mean(.x), 2)),
@@ -342,8 +314,7 @@ demo_cluster |>
   )
 
 # Nombramos los dos clusters según las características observadas y conservamos 
-# el número de cluster y agregamos una etiqueta interpretable para seguir las trayectorias.
-
+# el número de cluster y agregamos una etiqueta interpretable para seguir las trayectorias
 demo_cluster <- demo_cluster |>
   mutate(
     perfil = if_else(
@@ -354,11 +325,9 @@ demo_cluster <- demo_cluster |>
   )
 
 # Guardamos la clasificación país-año del cluster continuo
-
 write_csv(demo_cluster, "output/tablas/demo_cluster_continuo.csv")
 
 # Ver cómo cambia la cantidad de países en cada perfil a través de los años
-
 demo_cluster |>
   filter(anio %in% c(1961, 1970, 1980, 1990, 2000, 2010, 2020, 2024)) |>
   count(anio, perfil) |>
@@ -369,8 +338,7 @@ demo_cluster |>
 
 # Qué países hicieron ese cruce entre grupos y en qué año? Fue masomenos simultáneo ?
 # Chequeamos primero cuántas veces cambia de perfil cada país entre 1961 y 2024.
-# Esto permite distinguir transiciones únicas de trayectorias.
-
+# Esto permite distinguir transiciones únicas de trayectorias
 trayectorias <- demo_cluster |>
   arrange(pais, anio) |>
   summarise(
@@ -385,7 +353,6 @@ trayectorias |>
 
 # Resumimos las trayectorias en cuatro categorías: permanencia, transición única 
 # hacia el perfil avanzado y recorridos no lineales. Ahora lo guardamos para usarlo después
-
 trayectorias <- trayectorias |>
   mutate(
     tipo = case_when(
@@ -401,14 +368,12 @@ trayectorias |>
   count(tipo, sort = TRUE)
 
 # Guardamos los países que hicieron una única transición de joven a avanzado
-
 paises_transicion <- trayectorias |>
   filter(tipo == "Transición joven a avanzado") |>
   pull(pais)
 
 # Identificamos el primer año en que cada país con transición limpia
-# pasa del perfil joven y expansivo al perfil de transición avanzada.
-
+# pasa del perfil joven y expansivo al perfil de transición avanzada
 transiciones <- demo_cluster |>
   filter(pais %in% paises_transicion) |>
   summarise(
@@ -420,7 +385,6 @@ transiciones <- demo_cluster |>
 print(transiciones, n = Inf)
 
 # Esos cruces ocurrieron más o menos al mismo tiempo o están muy dispersos?
-
 transiciones |>
   summarise(
     primera = min(anio_transicion),
@@ -428,14 +392,12 @@ transiciones |>
     ultima = max(anio_transicion)
   )
 
-# transiciones por década:
-
+# transiciones por década
 transiciones |>
   count(decada = floor(anio_transicion / 10) * 10)
 
 # Resumimos la distribución de los años de transición para medir cuán extendido
-# fue el proceso entre los países con un único cambio hacia el perfil avanzado.
-
+# fue el proceso entre los países con un único cambio hacia el perfil avanzado
 transiciones |>
   summarise(
     primero = min(anio_transicion),
@@ -448,8 +410,7 @@ transiciones |>
 # Clusters discretos: sumamos 1961 y 1970 para la comparación con los otros momentos ####
 
 # Análisis de perfiles demográficos: sumamos ahora 1961 y 1970 para luego comparar
-# con los que ya teníamos. Replicamos la metodología.
-
+# con los que ya teníamos. Replicamos la metodología
 datos_1961 <- base_demo |>
   filter(anio == 1961)
 
@@ -457,30 +418,26 @@ datos_1970 <- base_demo |>
   filter(anio == 1970)
 
 # Construimos el PCA de 1961 con las mismas cuatro variables y la misma estandarización
-# utilizada en los otros momentos temporales.
-
+# utilizada en los otros momentos temporales
 pca_1961 <- pca_demografico(datos_1961, vars_demograficas)$pca
 
 pca_1961$eig
 pca_1961$var$coord[, 1:2]
 pca_1961$var$contrib[, 1:2]
 
-# Comparamos distintas cantidades de clusters en 1961 mediante silhouette promedio.
-
+# Comparamos distintas cantidades de clusters en 1961 mediante silhouette promedio
 silhouette_1961 <- evaluar_clusters_demograficos(pca_1961)
 
 silhouette_1961
 
-# Repetimos el mismo PCA para 1970.
-
+# Repetimos el mismo PCA para 1970
 pca_1970 <- pca_demografico(datos_1970, vars_demograficas)$pca
 
 pca_1970$eig
 pca_1970$var$coord[, 1:2]
 pca_1970$var$contrib[, 1:2]
 
-# Comparamos distintas cantidades de clusters en 1970.
-
+# Comparamos distintas cantidades de clusters en 1970
 silhouette_1970 <- evaluar_clusters_demograficos(pca_1970)
 
 silhouette_1970
@@ -488,14 +445,12 @@ silhouette_1970
 # Con k=3, el grupo más chico tiene 3 países en 1961 y 4 en 1970. En cambio, con k=2,
 # el grupo más chico tiene 53 y 61 países. Entonces, nos quedamos con k=2 en ambos años.
 
-# Fijamos dos clusters en 1961 y 1970 y le asociamos a cada país su cluster.
-
+# Fijamos dos clusters en 1961 y 1970 y le asociamos a cada país su cluster
 datos_1961_cluster <- clustering_demografico(pca_1961, datos_1961, vars_demograficas)$datos_cluster
 datos_1970_cluster <- clustering_demografico(pca_1970, datos_1970, vars_demograficas)$datos_cluster
 
 # Caracterizamos los dos clusters de cada año para identificar cuál corresponde
-# al perfil joven y cuál al perfil de transición avanzada.
-
+# al perfil joven y cuál al perfil de transición avanzada
 datos_1961_cluster |>
   summarise(
     n = n(),
@@ -519,15 +474,13 @@ datos_1970_cluster |>
 # Comparaciones finales de los clusters en momentos ####
 
 # Recuperamos la caracterización de los clusters obtenida en el análisis previo 
-# para integrarla con los nuevos cortes de 1961 y 1970.
-
+# para integrarla con los nuevos cortes de 1961 y 1970
 perfiles_1980_2024 <- read_csv(
   "output/tablas/perfiles_clusters_1980_2024.csv"
 )
 
 # Caracterizamos los clusters de 1961 y 1970 con las mismas variables utilizadas en 
-# los cuatro momentos del análisis original.
-
+# los cuatro momentos del análisis original
 perfiles_1961_1970 <- bind_rows(
   datos_1961_cluster,
   datos_1970_cluster
@@ -548,8 +501,7 @@ perfiles_1961_1970 <- bind_rows(
     )
   )
 
-# Unificamos el tipo de la variable de cluster para poder combinar ambas bases.
-
+# Unificamos el tipo de la variable de cluster para poder combinar ambas bases
 perfiles_1961_1970 <- perfiles_1961_1970 |>
   mutate(clust = as.integer(as.character(clust)))
 
@@ -557,8 +509,7 @@ perfiles_1980_2024 <- perfiles_1980_2024 |>
   mutate(clust = as.integer(clust))
 
 # Juntamos los seis momentos en una única base para comparar los cambios en las 
-# características de los perfiles. 
-
+# características de los perfiles
 evolucion_perfiles <- bind_rows(
   perfiles_1961_1970,
   perfiles_1980_2024
@@ -568,15 +519,13 @@ evolucion_perfiles <- bind_rows(
 evolucion_perfiles
 
 # Guardamos la evolución de los perfiles en los seis momentos
-
 write_csv(evolucion_perfiles, "output/tablas/evolucion_perfiles.csv")
 
 # Gráficos ####
 
 # Gráfico comparativo de las trayectorias (1961 contra 2024) ####
 
-# Nos quedamos con 1961 y 2024 y armamos una categoría que combine perfil y año,
-
+# Nos quedamos con 1961 y 2024 y armamos una categoría que combine perfil y año
 antes_despues <- evolucion_perfiles |>
   filter(anio %in% c(1961, 2024)) |>
   mutate(
@@ -620,11 +569,9 @@ antes_despues <- evolucion_perfiles |>
   )
 
 # Chequeamos los números
-
 antes_despues
 
 # Claro = 1961, oscuro = 2024, con los mismos azul y naranja de los otros gráficos
-
 colores_antes_despues <- c(
   "Perfil joven 1961" = "#8CC2E6",
   "Perfil joven 2024" = "#0072B2",
@@ -671,8 +618,7 @@ grafico_antes_despues <- ggplot(antes_despues, aes(x = perfil, y = valor, fill =
 
 grafico_antes_despues
 
-# Lo guardamos.
-
+# Lo guardamos
 ggsave(
   filename = "output/graficos/comparacion_caracteristicas_de_las_trayectorias.jpg",
   plot = grafico_antes_despues,
@@ -687,7 +633,6 @@ ggsave(
 # Gráfico 2: cambios en la pertenencia al grupo ####
 
 # Contamos cuántos países hay en cada perfil en cada año y lo pasamos a porcentaje
-
 composicion <- demo_cluster |>
   count(anio, perfil) |>
   mutate(
@@ -696,7 +641,6 @@ composicion <- demo_cluster |>
   )
 
 # Buscamos el año desde el cual los avanzados son mayoría y no dejan de serlo
-
 mayoria_avanzada <- composicion |>
   filter(perfil == "Transición avanzada") |>
   arrange(anio) |>
@@ -804,6 +748,7 @@ tabla_evolucion <- evolucion_perfiles |>
 
 tabla_evolucion
 
+# Guardamos
 gtsave(
   tabla_evolucion,
   "output/tablas/tabla_evolucion_perfiles.png",

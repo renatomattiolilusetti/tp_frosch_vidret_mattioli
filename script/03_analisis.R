@@ -1,8 +1,11 @@
 # ==============================================================================
 # Análisis exploratorio de la base WDI
 # ==============================================================================
+
+# Paquetes
 library(tidyverse)
 
+# Leemos base limpia
 wdi_limpia <- read_csv("input/wdi_limpia.csv")
 
 # Contamos dimension

@@ -2,11 +2,12 @@
 # Análisis de NA y Outliers
 # ==============================================================================
 
+# Paquetes 
 library(tidyverse)
 library(gt)
 
+# Leemos base
 wdi_limpia <- read_csv("input/wdi_limpia.csv")
-
 
 # Verificar que cada país tenga una sola observación por año
 stopifnot(

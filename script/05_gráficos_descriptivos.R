@@ -2,11 +2,13 @@
 # Gráficos correspondientes a la sección de Análisis de variables 
 # ==============================================================================
 
+# Paquetes
 library(tidyverse)
 library(scales)
 library(patchwork)
 library(ggplot2)
 
+# Leemos base limpia
 wdi_limpia <- read_csv("input/wdi_limpia.csv")
 
 # Evolución de la población por región #####
@@ -335,8 +337,6 @@ grafico_natalidad_mortalidad <- ggplot(
 print(grafico_natalidad_mortalidad)
 
 
-
-
 # Crecimiento poblacional por región, ponderado ####
 
 # 1. Detectar columnas de poblacion y crecimiento poblacional en wdi_limpia
@@ -403,7 +403,7 @@ datos_crecimiento <- crecimiento_region |>
   mutate(region = factor(region, levels = orden_regiones)) |>
   filter(!is.na(region))
 
-# 3. Construccion del grafico con el estilo de la Entrega 3
+# 3. Construccion del grafico
 grafico_crecimiento_region <- ggplot(
   datos_crecimiento,
   aes(
@@ -520,8 +520,7 @@ if (any(is.na(c(col_ingreso, col_65)))) {
 }
 
 # 2. Mediana por grupo de ingreso en 2024
-# Si en tu base el porcentaje de 65+ viene en proporcion (ej. 0.187 en vez de 18.7),
-# cambia el multiplicador a 100. Si ya viene en porcentaje (ej. 18.7), dejalo en 1.
+
 factor_pct <- 1
 
 mediana_ingreso_2024 <- wdi_limpia |>
@@ -567,7 +566,7 @@ datos_barras <- mediana_ingreso_2024 |>
   ) |>
   filter(!is.na(grupo))
 
-# 3. Construccion del grafico con el estilo de la Entrega 3
+# 3. Construccion del grafico
 grafico_65_ingreso <- ggplot(
   datos_barras,
   aes(x = grupo, y = mediana, fill = grupo)

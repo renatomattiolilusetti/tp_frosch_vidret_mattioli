@@ -2,7 +2,7 @@
 # 05 - Visualizaciones: gráfico exploratorio y comunicativo
 # ==============================================================================
 
-# 1. Preparación del análisis
+# 1. Preparación del análisis ####
 
 # Cargar paquetes
 library(tidyverse)
@@ -64,6 +64,7 @@ stopifnot(
 print("Datos cargados correctamente.")
 
 # 2. Gráfico exploratorio: perfiles demográficos en cuatro períodos ####
+
 # 2.1. Preparación de los datos para el PCA común
 
 clusters_largo <- trayectorias_paises |>
@@ -91,6 +92,7 @@ pca_apilado$var$coord[, 1:2]
 
 # PC1 orientado para que crezca con el % de 65+ (a la derecha = más envejecido)
 signo1 <- sign(pca_apilado$var$coord["poblacion_65_mas", "Dim.1"])
+
 # PC2 orientado para que su variable más importante crezca hacia arriba
 carga2_bruta <- pca_apilado$var$coord[, "Dim.2"]
 signo2 <- sign(carga2_bruta[which.max(abs(carga2_bruta))])
@@ -108,7 +110,7 @@ resumen <- puntos |>
             sd_y = sd(PC2), n = n(), .groups = "drop")
 resumen   # cuánto se corre cada grupo (x) y cuánto se dispersa en y (sd_y)
 
-# Solo buscamos entre países conocidos, con su nombre en castellano.
+# Solo buscamos entre países conocidos, con su nombre en castellano
 conocidos <- c(
   ARG = "Argentina", BRA = "Brasil", MEX = "México", CHL = "Chile", COL = "Colombia",
   PER = "Perú", URY = "Uruguay", BOL = "Bolivia", CUB = "Cuba", USA = "Estados Unidos",
@@ -135,9 +137,10 @@ puntos  <- con_rotulo(puntos)
 resumen <- con_rotulo(resumen)
 etiquetas <- con_rotulo(etiquetas)
 
-# Rango visible: recortamos el 0,5% más extremo de cada lado en los dos ejes,
-# para que unos pocos países no estiren el gráfico. Se informa en la nota 
-# cuántas observaciones quedan afuera.
+# Rango visible: recortamos el 0,5% más extremo de cada lado en los dos ejes, para que 
+# unos pocos países no estiren el gráfico. Se informa en la nota cuántas observaciones 
+# quedan afuera.
+
 # Eje x: se muestran todos los países y se deja aire a los dos costados, para
 # que se vea cómo las nubes se corren hacia la derecha.
 rango_x <- range(puntos$PC1)
@@ -147,7 +150,7 @@ lim_y   <- quantile(puntos$PC2, c(0.005, 0.995))
 n_fuera <- sum(puntos$PC2 < lim_y[1] | puntos$PC2 > lim_y[2])
 
 # Extremos de cada año: el país más joven (más a la izquierda en el componente 1)
-# y el más envejecido (más a la derecha), entre los que se ven en el gráfico.
+# y el más envejecido (más a la derecha), entre los que se ven en el gráfico
 mostrar_extremos <- TRUE
 nombres_extra <- c(
   NER = "Níger", MLI = "Malí", TCD = "Chad", SOM = "Somalia", UGA = "Uganda", YEM = "Yemen",
@@ -174,6 +177,7 @@ extremos <- puntos |>
          nombre = coalesce(unname(conocidos[codigo_pais]), unname(nombres_extra[codigo_pais]), pais),
          texto = paste0(tipo, nombre))
 extremos |> select(anio, texto)
+
 # Control: avisa si algún extremo no tiene nombre en castellano cargado
 sin_traducir <- extremos |>
   filter(!codigo_pais %in% c(names(conocidos), names(nombres_extra))) |>
@@ -184,25 +188,24 @@ if (nrow(sin_traducir) > 0) {
 }
 if (!mostrar_extremos) extremos <- extremos[0, ]
 
-# Extremos cuyo nombre va abajo del punto (por defecto va arriba). Agregar
-# códigos si algún otro nombre se superpone con un círculo.
+# Extremos cuyo nombre va abajo del punto (por defecto va arriba)
 extremos_abajo <- c("SOM")
 extremos <- extremos |> mutate(abajo = codigo_pais %in% extremos_abajo)
 
 
-# Posicionar la etiqueta de Argentina en relación con la mediana de su perfil.
+# Posicionar la etiqueta de Argentina en relación con la mediana de su perfil
 etiquetas <- etiquetas |>
   left_join(select(resumen, anio, perfil, my = y), by = c("anio", "perfil")) |>
   mutate(abajo = PC2 < my)
 
 # Etiqueta de Argentina en 1980: posición fija a la derecha del eje vertical.
-# Los otros tres años mantienen sus etiquetas automáticas originales.
+# Los otros tres años mantienen sus etiquetas automáticas originales
 etiquetas_1980 <- etiquetas |> filter(anio == 1980)
 etiquetas_otras <- etiquetas |> filter(anio != 1980)
 
-
-# Cantidad de países representados: se calcula desde los datos, no se fija a mano.
+# Cantidad de países representados: se calcula desde los datos, no lo fijamos a mano
 n_paises_graficados <- n_distinct(puntos$codigo_pais)
+
 
 # 2.4. Estilo visual
 
@@ -211,13 +214,14 @@ fuente_texto  <- "sans"
 
 if ("showtext" %in% loadedNamespaces()) showtext::showtext_auto(FALSE)
 
-# Paleta Okabe-Ito
+# Paleta (común: Okabe-Ito)
 col_perfil <- c(joven = "#0072B2", avanzado = "#E69F00")
 
 azul_titulo <- "#19354D"
 azul_texto  <- "#38536B"
 azul_nota   <- "#4F6478"
 gris_ejes   <- "#677887"
+
 
 # 2.5. Construcción del gráfico exploratorio
 
@@ -393,6 +397,7 @@ grafico_exploratorio <- ggplot(puntos, aes(PC1, PC2)) +
     plot.margin = margin(16, 18, 14, 16)
   )
 
+
 # 2.6. Exportación del gráfico exploratorio
 
 archivo_exploratorio <- "output/graficos/grupo_10_exploratorio.jpg"
@@ -407,7 +412,9 @@ ggsave(
   quality = 95
 )
 
+
 # 3. Gráfico comunicativo: mapas demográficos de 1980 y 2024 ####
+
 # 3.1. Preparación de los datos para ambos mapas
 columnas_necesarias <- c("pais", "codigo_pais", "anio", vars_demograficas)
 
@@ -422,12 +429,12 @@ base_mapas <- wdi_limpia |>
          !is.na(codigo_pais), codigo_pais != "PSE") |>
   select(all_of(columnas_necesarias))
 
-# La unidad de observacion debe ser pais-año.
+# La unidad de observacion debe ser pais-año
 if (anyDuplicated(base_mapas[c("codigo_pais", "anio")]) > 0) {
   stop("Se encontraron filas duplicadas para un mismo país y año.")
 }
 
-# No se reemplazan NA por cero ni se imputan valores faltantes.
+# No se reemplazan NA por cero ni se imputan valores faltantes
 base_mapas <- base_mapas |>
   filter(if_all(all_of(vars_demograficas), ~ !is.na(.x) & is.finite(.x)))
 
@@ -446,7 +453,9 @@ if (n_comparables < 3) {
 
 message("Países comparables para ambos años: ", n_comparables)
 
+
 # 3.2. PCA y clasificación demográfica por período
+
 clasificar_anio <- function(anio_elegido) {
   
   datos <- base_mapas |>
@@ -514,9 +523,11 @@ n_2024 <- sum(perfiles$anio == 2024 &
                 perfiles$perfil == "Transición avanzada")
 cambio_neto <- n_2024 - n_1980
 
+
 # 3.3. Cartografía y uniones controladas
+
 # Natural Earth: la escala 50 requiere a veces una descarga inicial; 110
-# funciona como respaldo. No cambia la clasificacion de los paises.
+# funciona como respaldo. No cambia la clasificacion de los paises
 mundo <- tryCatch(
   rnaturalearth::ne_countries(scale = 50, returnclass = "sf"),
   error = function(e) {
@@ -558,7 +569,9 @@ mapa_2024 <- mundo |>
             by = "codigo_pais", relationship = "many-to-one") |>
   mutate(anio = 2024)
 
+
 # 3.4. Paleta de colores y textos
+
 # Paleta Okabe-Ito
 paleta <- c(
   "Perfil demográfico joven" = "#0072B2",
@@ -607,7 +620,9 @@ color_titulo <- "#18344D"
 color_texto  <- "#36536B"
 color_nota   <- "#52677A"
 
+
 # 3.5. Construcción de los mapas de 1980 y 2024
+
 crear_mapa <- function(anio_elegido, cantidad_avanzados) {
   
   datos <- mapas |>
@@ -653,8 +668,10 @@ crear_mapa <- function(anio_elegido, cantidad_avanzados) {
 mapa_grafico_1980 <- crear_mapa(1980, n_1980)
 mapa_grafico_2024 <- crear_mapa(2024, n_2024)
 
+
 # 3.6. Composición del gráfico comunicativo
-# Alineacion hjust = 0.5: titulo, subtitulo, encabezados y notas centrados.
+
+# Alineacion hjust = 0.5: titulo, subtitulo, encabezados y notas centrados
 comparacion <- (mapa_grafico_1980 / mapa_grafico_2024) +
   patchwork::plot_layout(
     ncol = 1,
@@ -688,7 +705,9 @@ comparacion <- (mapa_grafico_1980 / mapa_grafico_2024) +
   ) &
   theme(legend.position = "bottom")
 
+
 # 3.7. Exportación del gráfico comunicativo
+
 archivo_comunicativo <- "output/graficos/grupo_10_comunicativo.jpg"
 
 ggsave(
@@ -701,7 +720,7 @@ ggsave(
   bg = "white"
 )
 
-# 4. Control final de archivos generados
+# 4. Control final de archivos generados ####
 
 archivos_generados <- c(
   "output/graficos/grupo_10_exploratorio.jpg",
