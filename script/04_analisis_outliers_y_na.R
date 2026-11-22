@@ -703,6 +703,168 @@ write_csv(
   "output/tablas/na_anios_elegidos.csv"
 )
 
+# Tabla de diagnóstico de outliers ####
+
+diagnostico <- read_csv(
+  "output/tablas/diagnostico_vertical_completo.csv",
+  show_col_types = FALSE
+)
+
+# Resumir la clasificación
+tabla_outliers_ppt <- diagnostico |>
+  count(clasificacion_vertical, name = "cantidad") |>
+  mutate(
+    categoria = recode(
+      clasificacion_vertical,
+      "Coherente con la trayectoria" = "Coherente con la trayectoria",
+      "Solo fuera de rango" = "Solo fuera del rango local",
+      "Solo supera 3 MAD" = "Solo supera 3 MAD",
+      "Alerta fuerte: ambos criterios" = "Alerta fuerte (ambos criterios)",
+      "No evaluable con MAD" = "No evaluable con MAD"
+    ),
+    porcentaje = 100 * cantidad / sum(cantidad)
+  ) |>
+  select(categoria, cantidad, porcentaje)
+
+# Ordenar las categorías
+orden_categorias <- c(
+  "Coherente con la trayectoria",
+  "Solo fuera del rango local",
+  "Solo supera 3 MAD",
+  "Alerta fuerte (ambos criterios)",
+  "No evaluable con MAD"
+)
+
+tabla_outliers_ppt <- tabla_outliers_ppt |>
+  arrange(match(categoria, orden_categorias))
+
+# Agregar fila total
+tabla_outliers_ppt <- bind_rows(
+  tabla_outliers_ppt,
+  tibble(
+    categoria = "TOTAL",
+    cantidad = sum(tabla_outliers_ppt$cantidad),
+    porcentaje = 100
+  )
+)
+
+# Formatear cantidades y porcentajes
+tabla_outliers_ppt <- tabla_outliers_ppt |>
+  mutate(
+    cantidad = formatC(
+      cantidad, format = "d", big.mark = "."
+    ),
+    porcentaje = if_else(
+      categoria == "TOTAL",
+      "100%",
+      paste0(
+        formatC(
+          porcentaje,
+          format = "f",
+          digits = 1,
+          decimal.mark = ","
+        ),
+        "%"
+      )
+    )
+  )
+
+# Construir tabla con gt
+tabla_outliers_gt <- tabla_outliers_ppt |>
+  gt() |>
+  tab_header(
+    title = md("**Diagnóstico temporal de outliers**"),
+    subtitle = "Clasificación de candidatos detectados mediante IQR"
+  ) |>
+  cols_label(
+    categoria = "Clasificación",
+    cantidad = "Observaciones",
+    porcentaje = "Porcentaje"
+  ) |>
+  cols_align(
+    align = "left",
+    columns = categoria
+  ) |>
+  cols_align(
+    align = "right",
+    columns = c(cantidad, porcentaje)
+  ) |>
+  
+  # Destacar la categoría principal
+  tab_style(
+    style = list(
+      cell_fill(color = "#EAF2F8"),
+      cell_text(weight = "bold", color = "#19354D")
+    ),
+    locations = cells_body(
+      rows = categoria == "Coherente con la trayectoria"
+    )
+  ) |>
+  
+  # Destacar las alertas fuertes
+  tab_style(
+    style = cell_text(
+      weight = "bold",
+      color = "#B45F06"
+    ),
+    locations = cells_body(
+      rows = categoria == "Alerta fuerte (ambos criterios)"
+    )
+  ) |>
+  
+  # Destacar el total
+  tab_style(
+    style = list(
+      cell_fill(color = "#EEF2F6"),
+      cell_text(weight = "bold")
+    ),
+    locations = cells_body(
+      rows = categoria == "TOTAL"
+    )
+  ) |>
+  
+  # Fuente
+  tab_source_note(
+    source_note = paste(
+      "Fuente: Banco Mundial (WDI). Elaboración propia.",
+      "11 indicadores, 1960–2025."
+    )
+  ) |>
+  
+  # Estilo general
+  tab_options(
+    table.font.names = "Arial",
+    table.font.size = px(15),
+    table.background.color = "white",
+    
+    heading.title.font.size = px(20),
+    heading.title.font.weight = "bold",
+    heading.subtitle.font.size = px(13),
+    
+    column_labels.background.color = "#19354D",
+    column_labels.font.weight = "bold",
+    column_labels.font.size = px(14),
+    
+    data_row.padding = px(7),
+    table_body.hlines.color = "#E5EBEF",
+    source_notes.font.size = px(11)
+  )
+
+dir.create(
+  "output/graficos",
+  recursive = TRUE,
+  showWarnings = FALSE
+)
+
+gtsave(
+  data = tabla_outliers_gt,
+  filename = "output/graficos/tabla_outliers_ppt.png",
+  zoom = 4,
+  vwidth = 1800,
+  vheight = 1200,
+  expand = 20
+)
+
 # Verificar que todos los archivos se guardaron
 archivos_resultados <- c(
   "output/tablas/outliers_horizontales_wdi.csv",
@@ -712,7 +874,8 @@ archivos_resultados <- c(
   "output/tablas/resumen_outliers_horizontal.csv",
   "output/tablas/diagnostico_vertical_completo.csv",
   "output/tablas/na_por_anio.csv",
-  "output/tablas/na_anios_elegidos.csv"
+  "output/tablas/na_anios_elegidos.csv",
+  "output/graficos/tabla_outliers_ppt.png"
 )
 
 stopifnot(all(file.exists(archivos_resultados)))

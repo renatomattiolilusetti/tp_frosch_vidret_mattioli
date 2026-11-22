@@ -74,7 +74,7 @@ Los scripts utilizan rutas relativas a la carpeta raíz del proyecto. Los archiv
 
 ## Reproducción del análisis
 
-### Paquetes necesario
+### Paquetes necesarios
 
 Instalar los paquetes requeridos:
 
