@@ -417,6 +417,21 @@ ggsave(
   quality = 95
 )
 
+# Versión horizontal para la presentación: mismo gráfico, con los cuatro años
+# en una grilla de 2 x 2 para que entre en una diapositiva
+grafico_exploratorio_ppt <- grafico_exploratorio +
+  facet_wrap(~ rotulo, ncol = 2)
+
+ggsave(
+  filename = "output/graficos/grupo_10_exploratorio_ppt.jpg",
+  plot = grafico_exploratorio_ppt,
+  width = 33,
+  height = 19,
+  units = "cm",
+  dpi = 300,
+  bg = "white",
+  quality = 95
+)
 
 # 3. Gráfico comunicativo: mapas demográficos de 1980 y 2024 ####
 
@@ -569,8 +584,8 @@ subtitulo_principal <- paste0(
 
 nota_fuente <- paste(
   "Fuente: Banco Mundial (WDI). Cartografía: Natural Earth. Elaboración propia.",
-  "Método: PCA y HCPC; población 65+, fecundidad, esperanza de vida y crecimiento.",
-  "Nota: perfiles relativos estimados por año, sin umbral fijo; lavanda: sin clasificación.",
+  "Perfiles: grupos de países armados por nosotros en cada año, según fecundidad,",
+  "esperanza de vida, crecimiento y población de 65+. Lavanda: países sin clasificación.",
   sep = "\n"
 )
 
@@ -801,8 +816,8 @@ ggsave(
 
 archivos_generados <- c(
   "output/graficos/grupo_10_exploratorio.jpg",
-  "output/graficos/grupo_10_comunicativo.jpg",
-  "output/graficos/coeficientes_regresiones.jpg"
+  "output/graficos/grupo_10_exploratorio_ppt.jpg",
+  "output/graficos/grupo_10_comunicativo.jpg"
 )
 
 stopifnot(
