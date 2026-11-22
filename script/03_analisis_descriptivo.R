@@ -186,13 +186,17 @@ grafico_mapas_na <- ggplot(
     expand = expansion(add = 0.05)
   ) +
   labs(
-    title = "Datos faltantes en indicadores económicos y sanitarios por región y década",
-    subtitle = "Indicadores con al menos 5% de faltantes en alguna región",
-    x = "Inicio del período",
+    title = "Los faltantes de los indicadores sanitarios se concentran antes de 2000",
+    subtitle = paste(
+      "Porcentaje de observaciones país-año sin información",
+      "por región y período (1960–2025)"
+    ),
+    x = "Década (año de inicio)",
     y = NULL,
     caption = paste(
       "Fuente: Banco Mundial (WDI). Elaboración propia.",
-      "Cada país-año pesa lo mismo; 2020-2025 abarca seis años."
+      "Variables con al menos 5% de faltantes en alguna región.",
+      "Cada país-año tiene el mismo peso; 2020–2025 abarca seis años."
     )
   ) +
   theme_minimal(base_size = 11) +
@@ -216,6 +220,196 @@ grafico_mapas_na <- ggplot(
   )
 
 print(grafico_mapas_na)
+
+# Mapa de calor de NA: tres regiones para la PPT ####
+
+# Definir las variables principales
+variables_principales_ppt <- c(
+  "poblacion_total",
+  "crecimiento_poblacional",
+  "natalidad",
+  "mortalidad",
+  "migracion_neta",
+  "fecundidad",
+  "esperanza_vida",
+  "poblacion_15_64",
+  "poblacion_65_mas",
+  "pib_per_capita_ppa",
+  "gasto_salud_pib",
+  "gasto_publico_salud_pib",
+  "gasto_bolsillo_salud",
+  "indice_cobertura_salud"
+)
+
+# Seleccionar las tres regiones
+regiones_ppt <- c(
+  "África Subsahariana",
+  "América Latina y el Caribe",
+  "Europa y Asia Central"
+)
+
+# Identificar variables con al menos 5% de NA
+# en alguna de las siete regiones originales
+
+variables_mapa_ppt <- wdi_limpia |>
+  group_by(region) |>
+  summarise(
+    across(
+      all_of(variables_principales_ppt),
+      ~ 100 * mean(is.na(.x))
+    ),
+    .groups = "drop"
+  ) |>
+  select(-region) |>
+  select(where(~ any(.x >= 5))) |>
+  names()
+
+# Calcular faltantes por región y década
+na_decadas_ppt <- wdi_limpia |>
+  filter(region %in% regiones_ppt) |>
+  mutate(
+    region = factor(region, levels = regiones_ppt),
+    decada = cut(
+      anio,
+      breaks = c(1960, 1970, 1980, 1990,
+                 2000, 2010, 2020, 2026),
+      labels = c(
+        "1960", "1970", "1980", "1990",
+        "2000", "2010", "2020"
+      ),
+      right = FALSE
+    )
+  ) |>
+  group_by(region, decada) |>
+  summarise(
+    across(
+      all_of(variables_mapa_ppt),
+      ~ 100 * mean(is.na(.x))
+    ),
+    .groups = "drop"
+  ) |>
+  pivot_longer(
+    cols = all_of(variables_mapa_ppt),
+    names_to = "variable",
+    values_to = "porcentaje_na"
+  )
+
+# Etiquetas de las variables
+etiquetas_ppt <- c(
+  poblacion_total = "Población total",
+  crecimiento_poblacional = "Crecimiento poblacional",
+  natalidad = "Natalidad",
+  mortalidad = "Mortalidad",
+  migracion_neta = "Migración neta",
+  fecundidad = "Fecundidad",
+  esperanza_vida = "Esperanza de vida",
+  poblacion_15_64 = "Población de 15 a 64 años",
+  poblacion_65_mas = "Población de 65 años o más",
+  pib_per_capita_ppa = "PIB per cápita PPA",
+  gasto_salud_pib = "Gasto en salud",
+  gasto_publico_salud_pib = "Gasto público en salud",
+  gasto_bolsillo_salud = "Gasto de bolsillo en salud",
+  indice_cobertura_salud = "Cobertura de servicios de salud"
+)
+
+# Construir gráfico compacto
+grafico_mapas_na_ppt <- ggplot(
+  na_decadas_ppt,
+  aes(x = decada, y = variable, fill = porcentaje_na)
+) +
+  geom_tile(
+    width = 0.97,
+    height = 0.90,
+    color = "white",
+    linewidth = 0.2
+  ) +
+  facet_wrap(
+    ~ region,
+    ncol = 3,
+    labeller = label_wrap_gen(width = 25)
+  ) +
+  scale_fill_gradient(
+    low = "#F7FBFF",
+    high = "#08306B",
+    limits = c(0, 100),
+    breaks = c(0, 25, 50, 75, 100),
+    name = "Datos faltantes (%)"
+  ) +
+  scale_x_discrete(
+    drop = FALSE,
+    expand = expansion(add = 0.05)
+  ) +
+  scale_y_discrete(
+    limits = rev(variables_mapa_ppt),
+    labels = function(x) unname(etiquetas_ppt[x]),
+    expand = expansion(add = 0.05)
+  ) +
+  labs(
+    title = "Los faltantes de los indicadores sanitarios se concentran antes de 2000",
+    subtitle = "Tres regiones seleccionadas | 1960–2025",
+    x = NULL,
+    y = NULL,
+    caption = NULL
+  ) +
+  theme_minimal(base_size = 11) +
+  theme(
+    panel.grid = element_blank(),
+    
+    plot.title = element_text(
+      face = "bold",
+      size = 17,
+      margin = margin(b = 4)
+    ),
+    plot.subtitle = element_text(
+      size = 10,
+      margin = margin(b = 8)
+    ),
+    strip.text = element_text(
+      face = "bold",
+      size = 10,
+      lineheight = 1.05,
+      margin = margin(b = 5)
+    ),
+    axis.text.x = element_text(
+      angle = 90,
+      hjust = 1,
+      vjust = 0.5,
+      size = 9
+    ),
+    axis.text.y = element_text(size = 9),
+    legend.position = "bottom",
+    legend.title = element_text(size = 10),
+    legend.text = element_text(size = 9),
+    
+    panel.spacing = grid::unit(0.3, "cm"),
+    plot.margin = margin(5, 10, 5, 10)
+  ) +
+  guides(
+    fill = guide_colorbar(
+      title.position = "top",
+      barwidth = grid::unit(7, "cm"),
+      barheight = grid::unit(0.25, "cm")
+    )
+  )
+
+print(grafico_mapas_na_ppt)
+
+# Guardar gráfico
+dir.create(
+  "output/graficos",
+  recursive = TRUE,
+  showWarnings = FALSE
+)
+
+ggsave(
+  "output/graficos/mapa_na_3_regiones_compacto.png",
+  plot = grafico_mapas_na_ppt,
+  width = 13.33,
+  height = 5.3,
+  units = "in",
+  dpi = 300,
+  bg = "white"
+)
 
 # Diccionario de variables ####
 

@@ -1434,5 +1434,3 @@ if (length(archivos_faltantes) > 0) {
 # Confirmar que existen todos
 cat(
   "\nValidación final: se encontraron todos los resultados esperados en output/.\n"
-)
-
