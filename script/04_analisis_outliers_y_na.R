@@ -851,14 +851,14 @@ tabla_outliers_gt <- tabla_outliers_ppt |>
   )
 
 dir.create(
-  "output/graficos",
+  "output/tablas",
   recursive = TRUE,
   showWarnings = FALSE
 )
 
 gtsave(
   data = tabla_outliers_gt,
-  filename = "output/graficos/tabla_outliers_ppt.png",
+  filename = "output/tablas/tabla_outliers_ppt.png",
   zoom = 4,
   vwidth = 1800,
   vheight = 1200,
@@ -875,7 +875,7 @@ archivos_resultados <- c(
   "output/tablas/diagnostico_vertical_completo.csv",
   "output/tablas/na_por_anio.csv",
   "output/tablas/na_anios_elegidos.csv",
-  "output/graficos/tabla_outliers_ppt.png"
+  "output/tablas/tabla_outliers_ppt.png"
 )
 
 stopifnot(all(file.exists(archivos_resultados)))
