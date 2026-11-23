@@ -111,4 +111,39 @@ source("script/11_graficos_exploratorio_comunicativo.R")
 
 **Resultados:** los scripts guardan las tablas en `output/tablas/` y los gráficos que exportan en `output/graficos/`. Algunos gráficos descriptivos del script `05` se muestran en el panel *Plots* de RStudio sin guardarse automáticamente en un archivo.
 
+
 ## Conclusiones principales
+
+Los resultados obtenidos **respaldan la existencia de patrones demográficos comunes en las trayectorias de envejecimiento**, aunque muestran que estas transiciones no ocurren simultáneamente ni bajo las mismas condiciones económicas y sanitarias. En este sentido, la evidencia sostiene la primera parte de nuestra hipótesis, con matices, y aporta respaldo parcial a la segunda.
+
+### 1. Patrones comunes en las trayectorias de envejecimiento
+
+El análisis de componentes principales (PCA) y clustering permitió identificar dos perfiles demográficos comparables en los distintos cortes temporales: uno **joven**, caracterizado por mayor fecundidad y crecimiento poblacional, y otro **avanzado**, asociado con una mayor proporción de población de 65 años o más y una mayor esperanza de vida.
+
+Entre 1980 y 2024, la cantidad de países clasificados en el perfil joven disminuyó de 117 a 84, mientras que los del perfil avanzado aumentaron de 77 a 110. Sin embargo, la transición no fue simultánea: los países del perfil avanzado pasaron a ser mayoría recién en 2010 y buena parte de África Subsahariana permanece en el perfil joven.
+
+Además, los perfiles no permanecieron constantes a lo largo del tiempo. El perfil joven de 2024 presenta características cercanas a las del avanzado de 1961, lo que muestra que incluso los países relativamente menos envejecidos atravesaron importantes transformaciones demográficas.
+
+Las regresiones lineales complementan estos resultados: en 2000, 2010 y 2019, la fecundidad presenta una asociación negativa con la proporción de población mayor de 65 años, mientras que la esperanza de vida muestra una asociación positiva. La persistencia de estos signos es consistente con la existencia de regularidades demográficas compartidas, aunque la robustez estadística de algunas asociaciones depende del tratamiento de los datos faltantes.
+
+### 2. Heterogeneidad de los contextos económicos y sanitarios
+
+La segunda parte de la hipótesis encuentra respaldo parcial. Los resultados sugieren que **niveles similares de envejecimiento pueden coexistir con condiciones económicas y sanitarias diferentes**.
+
+El análisis de quintiles de dependencia mayor para 2019 muestra que el gasto en salud no aumenta de manera uniforme con el envejecimiento. Los primeros cuatro quintiles presentan niveles promedio de gasto relativamente similares, entre 5,37% y 6,87% del PIB, mientras que el quinto alcanza el 8,83%. Las comparaciones de Tukey identifican diferencias estadísticamente significativas entre el quintil de mayor dependencia y cada uno de los cuatro restantes.
+
+Por su parte, las regresiones muestran que la incorporación de variables de financiamiento sanitario mejora el ajuste de los modelos, especialmente en 2010 y 2019, años en los que estas variables aportan información estadísticamente significativa de manera conjunta. Esto sugiere que las diferencias internacionales de envejecimiento se relacionan no solo con características demográficas, sino también con las condiciones de financiamiento de los sistemas sanitarios.
+
+Como análisis complementario, el PCA y clustering de indicadores económicos y sanitarios permite identificar distintas configuraciones de ingreso, cobertura de servicios de salud y participación del gasto de bolsillo entre países.
+
+### 3. Limitaciones y próximos pasos
+
+Los resultados deben interpretarse como evidencia descriptiva y asociativa, sin establecer relaciones causales. Identificamos tres limitaciones principales que orientan posibles extensiones del trabajo:
+
+- **Simplificación de las trayectorias demográficas:** la clasificación en dos perfiles permite reconocer patrones generales, pero puede ocultar situaciones intermedias. Los cambios no lineales de clasificación de algunos países motivan explorar un tercer perfil, estableciendo criterios mínimos de tamaño y calidad de los grupos.
+
+- **Alcance temporal de las comparaciones:** aunque el clustering continuo permite estudiar la evolución demográfica, las regresiones y el análisis de quintiles se basan en cortes transversales. Una extensión sería construir modelos de datos de panel que permitan seguir a los países a lo largo del tiempo y estudiar sus cambios dentro de una misma estructura analítica.
+
+- **Medición parcial de la capacidad de respuesta:** el gasto y los indicadores sanitarios utilizados no permiten caracterizar integralmente la preparación de los países frente al envejecimiento. Además, la disponibilidad desigual de información condiciona las muestras y los períodos analizados. Como próximo paso, sería relevante incorporar indicadores de protección social, sistemas previsionales, cuidados de larga duración y gasto sanitario por grupos de edad.
+
+En síntesis, **el envejecimiento poblacional presenta regularidades demográficas compartidas, pero sus trayectorias son heterogéneas y se desarrollan en contextos económicos y sanitarios diferentes**. Reconocer estas diferencias resulta fundamental para comprender por qué países que atraviesan procesos demográficos comparables pueden enfrentar desafíos distintos.
