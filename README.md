@@ -109,7 +109,7 @@ source("script/11_graficos_exploratorio_comunicativo.R")
 
 **Descarga y reproducibilidad:** el script `01` necesita conexión a Internet y puede obtener revisiones posteriores de los indicadores. Para reproducir exactamente una versión ya descargada, conservar su archivo `raw/wdi_raw.csv` y comenzar desde `02`.
 
-**Resultados:** los scripts guardan las tablas en `output/tablas/` y los gráficos que exportan en `output/graficos/`. Algunos gráficos descriptivos del script `05` se muestran en el panel *Plots* de RStudio sin guardarse automáticamente en un archivo.
+**Resultados:** los scripts guardan las tablas en `output/tablas/` y los gráficos que exportan en `output/graficos/`.
 
 
 ## Conclusiones principales
