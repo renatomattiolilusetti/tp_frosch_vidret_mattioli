@@ -23,24 +23,24 @@ La hipótesis de trabajo es que el envejecimiento se asocia con transformaciones
 - **Cobertura del recorte documentado:** 195 países, 66 años y 12.870 observaciones país-año. Se excluyen los agregados del Banco Mundial y los territorios no soberanos definidos en el script de limpieza.
 - **Variables:** se descargan 50 indicadores demográficos, económicos y sanitarios, incluidos indicadores por edad y sexo para construir pirámides poblacionales. La base procesada contiene 56 columnas, contando identificadores y variables auxiliares.
 
-Entre las principales dimensiones estudiadas se encuentran la fecundidad, la esperanza de vida, el crecimiento poblacional, la proporción de personas de 65 años o más, el PIB per cápita en paridad de poder adquisitivo (PPA), el gasto en salud y la cobertura de servicios sanitarios.
+Las variables principales incluyen población total y crecimiento, natalidad, mortalidad, migración neta, fecundidad, esperanza de vida, proporciones de población de 15 a 64 y de 65 años o más, PIB per cápita en paridad de poder adquisitivo (PPA), gasto en salud y cobertura de servicios sanitarios. Algunas variables derivadas se construyen dentro de los scripts; por ejemplo, la tasa de dependencia mayor se calcula como la proporción de población de 65 años o más dividida por la proporción de población de 15 a 64 años, multiplicada por 100.
 
-La cobertura efectiva de países y años varía entre análisis, según la disponibilidad de los indicadores seleccionados. Los datos faltantes no se reemplazan automáticamente por cero.
+La cobertura efectiva de países y años varía según el indicador y el análisis. Los valores faltantes se diagnostican y su tratamiento se documenta para cada procedimiento. No se consideran automáticamente equivalentes a cero. Los resultados de muestras o cortes temporales diferentes no deben interpretarse como si provinieran de un mismo panel completo.
 
-## Análisis realizado
+## Recorrido del análisis
 
-El trabajo combina distintas herramientas para pasar de la descripción de la transición demográfica a la comparación de sus trayectorias y de los contextos en los que ocurre:
+El trabajo parte de la caracterización de la transición demográfica, identifica perfiles de envejecimiento y, por último, compara los contextos económicos y sanitarios en los que se desarrolla.
 
-1. **Descarga y limpieza (`01`–`02`):** selección de indicadores WDI, exclusión de agregados y territorios definidos, estandarización de nombres y validación de la clave país-año.
-2. **Exploración de la base (`03`–`05`):** estadísticos descriptivos, diccionario de variables, diagnóstico de datos faltantes por región y período, identificación y revisión de valores atípicos, y gráficos de evolución poblacional y demográfica.
-3. **Regresiones lineales (`06`):** modelos progresivos para 2000, 2010 y 2019 que relacionan el porcentaje de población de 65 años o más con indicadores demográficos, económicos y de financiamiento sanitario. Se incluyen diagnósticos, errores estándar robustos HC1 y análisis de sensibilidad al tratamiento de faltantes mediante imputación múltiple.
-4. **Perfiles demográficos (`07`):** análisis de componentes principales (PCA) y clustering jerárquico para 1980, 1995, 2010 y 2024, con comparación de perfiles y trayectorias de países.
-5. **Capacidad de respuesta sanitaria y económica (`08`):** PCA y clustering para 2023 a partir de cobertura de servicios esenciales de salud, gasto de bolsillo y PIB per cápita PPA.
-6. **Dependencia mayor y gasto sanitario (`09`):** clasificación de países en quintiles de dependencia de personas mayores en 2019 y comparación del gasto en salud mediante estadísticas descriptivas, ANOVA y comparaciones de Tukey.
-7. **Trayectorias continuas (`10`):** extensión del clustering demográfico al período 1961–2024, con diagnóstico y tratamiento documentado de faltantes, para analizar cambios de perfil a lo largo del tiempo.
-8. **Visualizaciones exploratoria y comunicativa (`11`):** proyección de perfiles demográficos sobre componentes principales y mapas comparativos de 1980 y 2024.
-
-Las decisiones sobre exclusiones, imputaciones y valores atípicos se documentan en los scripts correspondientes. 
+1. **Descarga y limpieza (`01`–`02`).** Selección de indicadores, conservación de la descarga original, exclusión de agregados y territorios definidos, estandarización de nombres y validación de la clave país-año.
+2. **Exploración y estadísticas descriptivas (`03`–`05`).** Descripción de las principales variables, análisis de faltantes por región y período, detección y revisión de valores atípicos, y gráficos de evolución de la población y de indicadores demográficos.
+3. **Regresiones lineales (`06`).** Modelos progresivos para 2000, 2010 y 2019 que estudian la asociación entre el porcentaje de población de 65 años o más y variables demográficas, económicas y de financiamiento sanitario. Incluyen diagnósticos, errores estándar robustos HC1 y análisis de sensibilidad al tratamiento de faltantes mediante imputación múltiple (MICE).
+4. **Perfiles demográficos en cortes temporales (`07`).** Análisis de componentes principales (PCA) y clustering para 1980, 1995, 2010 y 2024, utilizando la proporción de población de 65 años o más, la fecundidad, la esperanza de vida y el crecimiento poblacional. Se comparan las características de los grupos y las trayectorias de los países entre cortes.
+5. **Perfiles económicos y sanitarios (`08`).** PCA y clustering para 2023 según cobertura de servicios esenciales de salud, gasto sanitario de bolsillo y PIB per cápita PPA. Se comparan los niveles de envejecimiento entre perfiles, incluidos contrastes no paramétricos.
+6. **Dependencia mayor y gasto sanitario (`09`).** Construcción de la tasa de dependencia mayor para 2019, clasificación de países en quintiles y comparación del gasto corriente en salud como porcentaje del PIB mediante descriptivos, ANOVA y pruebas de Tukey.
+7. **Trayectorias demográficas continuas (`10`).** Clustering conjunto de observaciones país-año de 1961–2024, luego de diagnosticar y tratar faltantes. Permite estudiar cambios de perfil, transiciones y recorridos no lineales. También incorpora comparaciones con perfiles estimados para 1961 y 1970.
+8. **Gráficos exploratorios y comunicativos (`11`).** Representación de perfiles demográficos en un espacio PCA común, mapas comparativos de 1980 y 2024 y visualizaciones de resultados de regresiones.
+9. **Pirámide poblacional animada (`12`).** Reconstrucción de la estructura por edad y sexo entre 1960 y 2024, agregando cantidades estimadas de personas a partir de los porcentajes por sexo y grupo etario. Para garantizar comparabilidad temporal, la animación usa un conjunto fijo de países con información completa en todos los años.
+10. **Descriptivas antes y después del tratamiento (`13`).** Comparación de la cantidad de observaciones, la distribución y otras estadísticas antes y después de las decisiones sobre faltantes y valores atípicos en las bases analíticas utilizadas.
 
 ## Estructura del repositorio
 
@@ -48,13 +48,13 @@ Las decisiones sobre exclusiones, imputaciones y valores atípicos se documentan
 proyecto/
 ├── README.md
 ├── raw/
-│   └── wdi_raw.csv                         # Descarga original de WDI
+│   └── wdi_raw.csv                               # Descarga original de WDI
 ├── input/
-│   └── wdi_limpia.csv                      # Base preparada para el análisis
-├── auxiliar/                               # Bases intermedias reutilizadas
+│   └── wdi_limpia.csv                            # Base limpia para los análisis
+├── auxiliar/                                     # Bases intermedias reutilizables
 ├── output/
-│   ├── tablas/                             # Tablas y diagnósticos exportados
-│   └── graficos/                           # Gráficos exportados
+│   ├── tablas/                                   # Tablas, diagnósticos y bases derivadas
+│   └── graficos/                                 # Gráficos y animaciones exportados
 ├── script/
 │   ├── 01_descarga.R
 │   ├── 02_limpieza.R
@@ -66,31 +66,31 @@ proyecto/
 │   ├── 08_clustering_respuesta_sanitaria_y_economica.R
 │   ├── 09_quintiles.R
 │   ├── 10_clustering_continuo.R
-│   └── 11_graficos_exploratorio_comunicativo.R
-└── utils/                                  # Funciones auxiliares utilizadas por los scripts
+│   ├── 11_graficos_exploratorio_comunicativo.R
+│   ├── 12_piramide_poblacional_mundial.R
+│   └── 13_descriptivas_post_limpieza.R
+└── utils/                                        # Funciones auxiliares propias
 ```
 
-Los scripts utilizan rutas relativas a la carpeta raíz del proyecto. Los archivos de `utils/` forman parte del código necesario para reproducir los análisis; no deben omitirse al subir el repositorio. La carpeta `auxiliar/` incluye, entre otros archivos generados, la muestra de países para los cortes del clustering demográfico.
+Las funciones de `utils/` forman parte del código necesario para reproducir los análisis. `raw/` conserva los datos originales. `input/` contiene la base limpia, y `output/` almacena resultados finales. La carpeta auxiliar/ incluye, entre otros archivos generados, la muestra de países para los cortes del clustering demográfico. Los scripts utilizan rutas relativas a la carpeta raíz del proyecto.
 
 ## Reproducción del análisis
 
 ### Paquetes necesarios
 
-Instalar los paquetes requeridos:
+En RStudio, instalar una sola vez los paquetes que falten:
 
 ```r
 install.packages(c(
   "tidyverse", "WDI", "mice", "naniar", "car", "lmtest", "sandwich",
   "cluster", "FactoMineR", "factoextra", "gt", "webshot2",
   "scales", "patchwork", "ggrepel", "sf", "rnaturalearth",
-  "rnaturalearthdata", "ggtext", "zoo", "lattice"
+  "rnaturalearthdata", "ggtext", "zoo", "lattice", "gifski"
 ))
 ```
-
 ### Orden de ejecución
 
 Con la carpeta raíz como directorio de trabajo, ejecutar en la consola de RStudio:
-
 ```r
 source("script/01_descarga.R")
 source("script/02_limpieza.R")
@@ -103,14 +103,15 @@ source("script/08_clustering_respuesta_sanitaria_y_economica.R")
 source("script/09_quintiles.R")
 source("script/10_clustering_continuo.R")
 source("script/11_graficos_exploratorio_comunicativo.R")
+source("script/12_piramide_poblacional_mundial.R")
+source("script/13_descriptivas_post_limpieza.R")
 ```
 
-**Dependencias entre etapas:** `01` genera `raw/wdi_raw.csv`; `02` genera `input/wdi_limpia.csv`, que utilizan los análisis siguientes. `04` exporta diagnósticos utilizados en `07`, mientras que `07` produce archivos que requieren `10` y `11`. Los scripts recurren además a funciones propias alojadas en `utils/`.
+**Dependencias entre etapas:** `01` genera `raw/wdi_raw.csv`; `02` genera `input/wdi_limpia.csv`. El script `04` exporta diagnósticos que utiliza `07`; `07` genera archivos que necesitan `10` y `11`, y `06` aporta resultados para `11`. El script `13` necesita archivos producidos por `04`, `07`, `08` y `10`. El script `12` depende de la base limpia y genera su propia tabla y animación.
 
-**Descarga y reproducibilidad:** el script `01` necesita conexión a Internet y puede obtener revisiones posteriores de los indicadores. Para reproducir exactamente una versión ya descargada, conservar su archivo `raw/wdi_raw.csv` y comenzar desde `02`.
+**Versiones de los datos:** `01` requiere conexión a Internet. Como WDI puede revisar los indicadores, una nueva descarga puede producir resultados diferentes. Para trabajar con la misma versión de los datos ya descargada, conservar `raw/wdi_raw.csv` y comenzar desde `02`, siempre que estén disponibles los archivos de código y las funciones auxiliares correspondientes.
 
-**Resultados:** los scripts guardan las tablas en `output/tablas/` y los gráficos que exportan en `output/graficos/`.
-
+**Resultados:** las tablas se guardan en `output/tablas/` y las visualizaciones en `output/graficos/`.
 
 ## Conclusiones principales
 
